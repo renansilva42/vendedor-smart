@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat com IA - {{ chatbot_type.capitalize() }}</title>
+    <title>Chat com IA - {{ 'Especialista em Métodos de Venda' if chatbot_type == 'atual' else 'Treinamento de Vendas' }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="chat-header">
-        <h1>Chat com IA - {{ chatbot_type.capitalize() }}</h1>
+        <h1>Chat com IA - {{ 'Especialista em Métodos de Venda' if chatbot_type == 'atual' else 'Treinamento de Vendas' }}</h1>
         <div class="header-buttons">
             <button id="back-btn" onclick="goBack()">Voltar</button>
             <button id="logout-btn" onclick="logout()">Logout</button>

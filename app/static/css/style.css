@@ -108,8 +108,8 @@ button {
     transition: background-color 0.3s; /* Transição suave para a cor de fundo */
     border-radius: 4px; /* Bordas arredondadas */
     font-size: 16px; /* Tamanho da fonte */
-    width: 100%; /* Botões ocupam toda a largura do container */
-    margin-top: 10px; /* Margem superior para espaçamento */
+    width: auto; /* Definir a largura como auto */
+    margin: 10px 5px; /* Margem superior e inferior para espaçamento */
 }
 
 button:hover {
@@ -165,41 +165,7 @@ button:hover {
     display: flex; /* Usar flexbox para alinhar os botões */
     justify-content: flex-end; /* Alinhar os botões à direita */
     width: 100%; /* Garantir que ocupem toda a largura disponível */
-}
-
-/* Estilos para o botão de logout */
-#logout-btn {
-    background-color: #dc3545; /* Cor de fundo do botão */
-    color: white; /* Cor do texto */
-    border: none; /* Sem borda */
-    padding: 12px 20px; /* Padding para aumentar o tamanho do botão */
-    border-radius: 4px; /* Bordas arredondadas */
-    cursor: pointer; /* Cursor de ponteiro ao passar o mouse */
-    transition: background-color 0.3s; /* Transição suave para a cor de fundo */
-    font-size: 16px; /* Tamanho da fonte */
-    width: 18%; /* Definir a largura dos botões para 18% */
-    margin: 10px 1%; /* Margem superior e inferior para espaçamento */
-}
-
-#logout-btn:hover {
-    background-color: #c82333; /* Cor de fundo ao passar o mouse */
-}
-
-#back-btn {
-    background-color: #6c757d; /* Cor do botão Voltar */
-    color: white; /* Cor do texto */
-    border: none; /* Sem borda */
-    padding: 12px 20px; /* Padding para aumentar o tamanho do botão */
-    border-radius: 4px; /* Bordas arredondadas */
-    cursor: pointer; /* Cursor de ponteiro ao passar o mouse */
-    transition: background-color 0.3s; /* Transição suave para a cor de fundo */
-    font-size: 16px; /* Tamanho da fonte */
-    width: 18%; /* Definir a largura dos botões para 18% */
-    margin: 10px 1%; /* Margem superior e inferior para espaçamento */
-}
-
-#back-btn:hover {
-    background-color: #5a6268; /* Cor ao passar o mouse */
+    text-align: center;
 }
 
 /* Estilos para as mensagens do chat */
