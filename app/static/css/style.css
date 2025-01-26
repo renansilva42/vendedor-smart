@@ -1,146 +1,180 @@
-/* Estilos gerais */
-body {
-    font-family: Arial, sans-serif;
+/* Paleta de cores */
+:root {
+    --primary-color: #007bff;
+    --primary-color-hover: #0056b3;
+    --secondary-color: #28a745;
+    --secondary-color-hover: #218838;
+    --danger-color: #dc3545;
+    --danger-color-hover: #c82333;
+    --background-color: #f0f2f5;
+    --text-color: #333;
+    --light-text-color: #666;
+  }
+  
+  /* Estilos gerais */
+  body {
+    font-family: 'Roboto', Arial, sans-serif;
     max-width: 800px;
     margin: 0 auto;
-    padding: 20px;
-    background-color: #f0f2f5;
-}
-
-h1 {
-    color: #007bff;
+    padding: 40px;
+    background-color: var(--background-color);
+  }
+  
+  h1 {
+    color: var(--primary-color);
     text-align: center;
-    margin: 0;
-}
-
-/* Estilos para o formulário de login */
-.login-container {
-    max-width: 400px;
-    margin: 100px auto; /* Margem superior para dar mais espaço acima */
-    padding: 30px; /* Padding interno do container */
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 40px;
+  }
+  
+  /* Estilos para o formulário de login */
+  .login-container {
     background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    box-sizing: border-box; /* Garantir que o padding não afete a largura total */
-}
-
-.form-group {
-    margin-bottom: 20px; /* Margem inferior para mais espaço entre os campos */
-}
-
-.form-group label {
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    margin-bottom: 40px;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  
+  .login-container:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+  
+  .form-group {
+    margin-bottom: 24px;
+  }
+  
+  .form-group label {
     display: block;
-    margin-bottom: 8px; /* Margem inferior do label */
-    color: #333;
-}
-
-.form-group input {
-    width: 100%;
-    padding: 12px; /* Padding interno dos inputs */
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    margin-bottom: 12px;
+    color: var(--text-color);
     font-size: 16px;
-    box-sizing: border-box; /* Garantir que o padding não afete a largura total */
-}
-
-/* Estilos para a página de seleção de chatbot */
-.select-chatbot-container {
-    max-width: 600px;
-    margin: 50px auto;
-    padding: 20px;
+    font-weight: 500;
+  }
+  
+  .form-group input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+  
+  /* Estilos para a página de seleção de chatbot */
+  .select-chatbot-container {
     background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    margin-bottom: 40px;
     text-align: center;
-}
-
-.chatbot-options {
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  
+  .select-chatbot-container:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+  
+  .chatbot-options {
     display: flex;
     justify-content: space-around;
     margin-top: 30px;
-}
-
-.chatbot-button {
+  }
+  
+  .chatbot-button {
     display: inline-block;
     padding: 15px 30px;
-    background-color: #007bff;
+    background-color: var(--primary-color);
     color: white;
     text-decoration: none;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 18px;
+    font-weight: 500;
     transition: background-color 0.3s;
-}
-
-.chatbot-button:hover {
-    background-color: #0056b3;
-}
-
-/* Estilos para o chat */
-#chat-container {
+  }
+  
+  .chatbot-button:hover {
+    background-color: var(--primary-color-hover);
+  }
+  
+  /* Estilos para o chat */
+  #chat-container {
     border: 1px solid #ccc;
     padding: 20px;
     height: 400px;
     overflow-y: scroll;
     margin-bottom: 20px;
     background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Estilos para o campo de input */
-#user-input {
-    width: calc(100% - 20px); /* Ajustar a largura para ocupar 100% menos o padding */
-    padding: 10px; /* Padding interno */
-    margin-right: 10px; /* Margem à direita */
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  
+  #chat-container:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Estilos para o campo de input */
+  #user-input {
+    width: calc(100% - 20px);
+    padding: 10px;
+    margin-right: 10px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 16px;
-    box-sizing: border-box; /* Garantir que o padding não afete a largura total */
-}
-
-/* Estilos para botões */
-button {
-    padding: 12px 20px; /* Padding para aumentar o tamanho do botão */
-    background-color: #007bff; /* Cor de fundo do botão */
-    color: white; /* Cor do texto */
-    border: none; /* Sem borda */
-    cursor: pointer; /* Cursor de ponteiro ao passar o mouse */
-    transition: background-color 0.3s; /* Transição suave para a cor de fundo */
-    border-radius: 4px; /* Bordas arredondadas */
-    font-size: 16px; /* Tamanho da fonte */
-    width: auto; /* Definir a largura como auto */
-    margin: 10px 5px; /* Margem superior e inferior para espaçamento */
-}
-
-button:hover {
-    background-color: #0056b3;
-}
-
-#new-user-btn {
-    background-color: #28a745; /* Cor do botão Novo Usuário */
-}
-
-#new-user-btn:hover {
-    background-color: #218838; /* Cor ao passar o mouse */
-}
-
-#logout-btn {
-    background-color: #dc3545; /* Cor do botão Logout */
-}
-
-#logout-btn:hover {
-    background-color: #c82333; /* Cor ao passar o mouse */
-}
-
-/* Estilos para mensagens de erro */
-#error-message {
-    color: #dc3545;
+    box-sizing: border-box;
+  }
+  
+  /* Estilos para botões */
+  button {
+    padding: 12px 20px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    width: auto;
+    margin: 10px 5px;
+  }
+  
+  button:hover {
+    background-color: var(--primary-color-hover);
+  }
+  
+  #new-user-btn {
+    background-color: var(--secondary-color);
+  }
+  
+  #new-user-btn:hover {
+    background-color: var(--secondary-color-hover);
+  }
+  
+  #logout-btn {
+    background-color: var(--danger-color);
+  }
+  
+  #logout-btn:hover {
+    background-color: var(--danger-color-hover);
+  }
+  
+  /* Estilos para mensagens de erro */
+  #error-message {
+    color: var(--danger-color);
     text-align: center;
     margin-top: 10px;
-}
-
-/* Estilos para o cabeçalho do chat e da página de seleção */
-.header {
+  }
+  
+  /* Estilos para o cabeçalho do chat e da página de seleção */
+  .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -148,9 +182,9 @@ button:hover {
     background-color: #f0f0f0;
     margin-bottom: 20px;
     border-radius: 8px;
-}
-
-.chat-header {
+  }
+  
+  .chat-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -158,70 +192,63 @@ button:hover {
     background-color: #f0f0f0;
     margin-bottom: 20px;
     border-radius: 8px;
-}
-
-/* Estilos para os botões de Logout e Voltar */
-.header-buttons {
-    display: flex; /* Usar flexbox para alinhar os botões */
-    justify-content: flex-end; /* Alinhar os botões à direita */
-    width: 100%; /* Garantir que ocupem toda a largura disponível */
+  }
+  
+  /* Estilos para os botões de Logout e Voltar */
+  .header-buttons {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
     text-align: center;
-}
-
-/* Estilos para as mensagens do chat */
-.message {
+  }
+  
+  /* Estilos para as mensagens do chat */
+  .message {
     margin-bottom: 10px;
     padding: 10px;
     border-radius: 8px;
     max-width: 70%;
-}
-
-.user-message {
-    background-color: #007bff;
+  }
+  
+  .user-message {
+    background-color: var(--primary-color);
     color: white;
     align-self: flex-end;
     margin-left: auto;
-}
-
-.assistant-message {
+  }
+  
+  .assistant-message {
     background-color: #f1f0f0;
-    color: #333;
+    color: var(--text-color);
     align-self: flex-start;
-}
-
-/* Responsividade */
-@media (max-width: 600px) {
+  }
+  
+  /* Responsividade */
+  @media (max-width: 768px) {
     body {
-        padding: 10px;
+      padding: 20px;
     }
-
-    #user-input {
-        width: 100%;
-        margin-right: 0;
-        margin-bottom: 10px;
+  
+    .login-container,
+    .select-chatbot-container,
+    #chat-container {
+      padding: 20px;
     }
-
-    button {
-        width: 100%;
-    }
-
-    #new-user-btn {
-        margin-left: 0;
-        margin-top: 10px;
-    }
-
+  
     .chatbot-options {
-        flex-direction: column;
-        gap: 15px;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
     }
-
+  
     .header-buttons {
-        flex-direction: column; /* Empilhar os botões verticalmente */
-        align-items: stretch; /* Fazer os botões ocuparem toda a largura */
+      flex-direction: column;
+      align-items: stretch;
     }
-
-    #back-btn, #logout-btn {
-        width: 70%; /* Botões ocupam toda a largura do container */
-        margin: 5px 30px; /* Margem vertical para espaçamento */
+  
+    #back-btn,
+    #logout-btn {
+      width: 100%;
+      margin: 10px 0;
     }
-}
+  }
