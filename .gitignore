@@ -1,0 +1,51 @@
+# Ambientes virtuais
+venv/
+env/
+.venv/
+
+# Arquivos Python compilados
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos de configuração local
+.env
+
+# Logs
+*.log
+
+# Arquivos de banco de dados SQLite (se estiver usando)
+*.sqlite
+
+# Arquivos de IDE/editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Arquivos de distribuição/build
+dist/
+build/
+*.egg-info/
+
+# Arquivos de cache do pytest
+.pytest_cache/
+
+# Arquivos de cobertura
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Arquivos temporários
+*.tmp
+*.bak
+*.swp
+*~
+
+# Arquivos específicos do seu projeto (adicione conforme necessário)
+# config.py  # Descomente se seu config.py contiver informações sensíveis

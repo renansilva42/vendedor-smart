@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selecionar Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="select-chatbot-container">
+        <div class="header">
+            <h1>Selecione o Chatbot</h1>
+            <button id="logout-btn" onclick="logout()">Logout</button>
+        </div>
+        <div class="chatbot-options">
+            <a href="{{ url_for('main.chat', chatbot_type='atual') }}" class="chatbot-button">Especialista em Métodos de Venda
+            </a>
+            <br>
+            <a href="{{ url_for('main.chat', chatbot_type='novo') }}" class="chatbot-button">Treinamento de Vendas</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        function logout() {
+            axios.get('/logout')
+                .then(() => {
+                    window.location.href = "{{ url_for('main.index') }}";
+                })
+                .catch(error => {
+                    console.error('Erro ao fazer logout:', error);
+                });
+        }
+    </script>
+</body>
+</html>

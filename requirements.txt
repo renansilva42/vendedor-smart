@@ -1,0 +1,6 @@
+flask
+python-dotenv
+requests
+supabase
+openai>=1.0.0
+pytz

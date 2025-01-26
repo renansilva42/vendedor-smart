@@ -1,0 +1,218 @@
+/* Estilos gerais */
+body {
+    font-family: Arial, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f0f2f5;
+}
+
+h1 {
+    color: #007bff;
+    text-align: center;
+    margin: 0;
+}
+
+/* Estilos para o formulário de login */
+.login-container {
+    max-width: 400px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+/* Estilos para a página de seleção de chatbot */
+.select-chatbot-container {
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.chatbot-options {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 30px;
+}
+
+.chatbot-button {
+    display: inline-block;
+    padding: 15px 30px;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 18px;
+    transition: background-color 0.3s;
+}
+
+.chatbot-button:hover {
+    background-color: #0056b3;
+}
+
+/* Estilos para o chat */
+#chat-container {
+    border: 1px solid #ccc;
+    padding: 20px;
+    height: 400px;
+    overflow-y: scroll;
+    margin-bottom: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#user-input {
+    width: 70%;
+    padding: 10px;
+    margin-right: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+/* Estilos para botões */
+button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#new-user-btn {
+    background-color: #28a745;
+    margin-left: 10px;
+}
+
+#new-user-btn:hover {
+    background-color: #218838;
+}
+
+/* Estilos para mensagens de erro */
+#error-message {
+    color: #dc3545;
+    text-align: center;
+    margin-top: 10px;
+}
+
+/* Estilos para o cabeçalho do chat e da página de seleção */
+.chat-header, .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #f0f0f0;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+#logout-btn, #back-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#logout-btn:hover, #back-btn:hover {
+    background-color: #c82333;
+}
+
+#back-btn {
+    background-color: #6c757d;
+}
+
+#back-btn:hover {
+    background-color: #5a6268;
+}
+
+/* Estilos para as mensagens do chat */
+.message {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    max-width: 70%;
+}
+
+.user-message {
+    background-color: #007bff;
+    color: white;
+    align-self: flex-end;
+    margin-left: auto;
+}
+
+.assistant-message {
+    background-color: #f1f0f0;
+    color: #333;
+    align-self: flex-start;
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+
+    #user-input {
+        width: 100%;
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+
+    button {
+        width: 100%;
+    }
+
+    #new-user-btn {
+        margin-left: 0;
+        margin-top: 10px;
+    }
+
+    .chatbot-options {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .header-buttons {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
