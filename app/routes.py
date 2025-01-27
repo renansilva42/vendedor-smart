@@ -158,3 +158,26 @@ def get_chat_history():
 
     messages = Message.get_messages(thread_id, chatbot_type)
     return jsonify(messages)
+
+@bp.route('/dashboard')
+@login_required
+def dashboard():
+    return render_template('dashboard.html')
+
+@bp.route('/get_dashboard_data')
+@login_required
+def get_dashboard_data():
+    user_id = session.get('user_id')
+    
+    # Aqui você deve implementar a lógica para obter os dados reais do usuário
+    # Por enquanto, usaremos dados de exemplo
+    data = {
+        'login_count': 10,  # Obter da tabela de usuários
+        'lead_score': 75,  # Implementar lógica para calcular este score
+        'ia_conversation_score': 85,  # Implementar lógica para calcular este score
+        'ia_evaluation_score': 90,  # Implementar lógica para calcular este score
+        'ia_feedback': "O vendedor poderia ter sido mais assertivo na apresentação dos benefícios do produto.",
+        'posicionamento': "O vendedor demonstra bom alinhamento com os valores da empresa, mas pode melhorar na comunicação da proposta de valor."
+    }
+    
+    return jsonify(data)

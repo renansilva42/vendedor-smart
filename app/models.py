@@ -178,6 +178,17 @@ class User:
         except Exception as e:
             print(f"Erro ao atualizar nome do usuário no Supabase: {e}")
             return None
+        
+    @staticmethod
+    def get_login_count(user_id):
+        try:
+            response = supabase.table('usuarios_chatbot').select('login_count').eq('id', user_id).execute()
+            if response.data:
+                return response.data[0]['login_count']
+            return 0
+        except Exception as e:
+            print(f"Erro ao obter contagem de logins: {e}")
+            return 0
 
 class Message:
     @staticmethod
@@ -218,4 +229,28 @@ class Message:
             print(f"Nomes de usuário atualizados nas mensagens: {response.data}")
         except Exception as e:
             print(f"Erro ao atualizar nomes de usuário nas mensagens: {e}")
+            
+    @staticmethod
+    def calculate_conversation_scores(user_id):
+        # Implemente a lógica para calcular os scores das conversas
+        # Isso pode envolver análise de sentimento, contagem de palavras-chave, etc.
+        # Por enquanto, retornaremos valores de exemplo
+        return {
+            'lead_score': 75,
+            'ia_conversation_score': 85,
+            'ia_evaluation_score': 90
+        }
+
+    @staticmethod
+    def get_ia_feedback(user_id):
+        # Implemente a lógica para gerar feedback da IA
+        # Isso pode envolver análise das últimas conversas e uso de prompts específicos para a IA
+        return "O vendedor poderia ter sido mais assertivo na apresentação dos benefícios do produto."
+
+    @staticmethod
+    def analyze_positioning(user_id):
+        # Implemente a lógica para analisar o posicionamento do vendedor
+        # Isso pode envolver comparação das mensagens do vendedor com os valores da empresa
+        return "O vendedor demonstra bom alinhamento com os valores da empresa, mas pode melhorar na comunicação da proposta de valor."
+
 # Remova ou comente as funções de exemplo no final do arquivo, se não forem mais necessárias
