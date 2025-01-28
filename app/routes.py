@@ -88,10 +88,12 @@ def send_message():
     current_user_name = User.get_name(user_id)
     print(f"Nome atual do usuário: {current_user_name}")
 
+    # Só tenta extrair o nome se o usuário ainda não tiver um nome definido
     if current_user_name in ["Usuário Anônimo", "Nenhum nome encontrado"]:
         extracted_name = chatbot.extract_name(message)
         print(f"Nome extraído pelo chatbot: {extracted_name}")
-        if extracted_name and extracted_name.lower() != "nenhum nome encontrado":
+        
+        if extracted_name and extracted_name.lower() not in ["nenhum nome encontrado", current_user_name.lower()]:
             try:
                 print(f"Tentando atualizar nome do usuário {user_id} para: {extracted_name}")
                 updated_user = User.update_name(user_id, extracted_name)
@@ -121,7 +123,7 @@ def send_message():
     else:
         print("Falha ao criar mensagem do assistente")
 
-    return jsonify({'response': response})
+    return jsonify({'response': response, 'user_name': current_user_name})
 
 @bp.route('/new_user', methods=['POST'])
 @login_required
@@ -129,7 +131,7 @@ def new_user():
     old_user_id = session.pop('user_id', None)
     session.pop('user_name', None)
     chatbot_type = session.pop('chatbot_type', None)
-    email = session.get('user_email')  # Adicione esta linha para obter o email da sessão
+    email = session.get('user_email')
     print(f"Iniciando nova conversa. Usuário anterior: {old_user_id}")
 
     new_user_id = str(uuid.uuid4())
@@ -169,15 +171,18 @@ def dashboard():
 def get_dashboard_data():
     user_id = session.get('user_id')
     
-    # Aqui você deve implementar a lógica para obter os dados reais do usuário
-    # Por enquanto, usaremos dados de exemplo
+    login_count = User.get_login_count(user_id)
+    scores = Message.calculate_conversation_scores(user_id)
+    ia_feedback = Message.get_ia_feedback(user_id)
+    posicionamento = Message.analyze_positioning(user_id)
+    
     data = {
-        'login_count': 10,  # Obter da tabela de usuários
-        'lead_score': 75,  # Implementar lógica para calcular este score
-        'ia_conversation_score': 85,  # Implementar lógica para calcular este score
-        'ia_evaluation_score': 90,  # Implementar lógica para calcular este score
-        'ia_feedback': "O vendedor poderia ter sido mais assertivo na apresentação dos benefícios do produto.",
-        'posicionamento': "O vendedor demonstra bom alinhamento com os valores da empresa, mas pode melhorar na comunicação da proposta de valor."
+        'login_count': login_count,
+        'lead_score': scores['lead_score'],
+        'ia_conversation_score': scores['ia_conversation_score'],
+        'ia_evaluation_score': scores['ia_evaluation_score'],
+        'ia_feedback': ia_feedback,
+        'posicionamento': posicionamento
     }
     
     return jsonify(data)

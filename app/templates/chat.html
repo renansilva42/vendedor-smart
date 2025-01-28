@@ -98,7 +98,7 @@
             })
             .then(response => {
                 const messages = response.data;
-                messages.reverse().forEach(msg => {
+                messages.forEach(msg => {
                     displayMessage(msg.role === 'user' ? 'Você' : 'IA', msg.content);
                 });
             })

@@ -45,7 +45,7 @@ class Chatbot:
             client.beta.threads.messages.create(
                 thread_id=temp_thread,
                 role="user",
-                content="Você é um assistente especializado em extrair nomes de pessoas de mensagens. Se um nome for mencionado, retorne apenas o nome. Se nenhum nome for mencionado, retorne 'Nenhum nome encontrado'. Ignore palavras como 'sou', 'me chamo', etc."
+                content="Você é um assistente especializado em extrair nomes de pessoas de mensagens. Se um nome for mencionado, retorne apenas o nome. Se nenhum nome for mencionado, retorne 'Nenhum nome encontrado'. Ignore palavras como 'sou', 'me chamo', etc. Retorne apenas o primeiro nome encontrado."
             )
     
             client.beta.threads.messages.create(
