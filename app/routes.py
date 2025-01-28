@@ -3,6 +3,7 @@ from app.chatbot import Chatbot
 from app.models import User, Message, Auth
 import uuid
 from functools import wraps
+from .whatsapp_handler import process_whatsapp_message
 
 bp = Blueprint('main', __name__)
 
@@ -186,3 +187,9 @@ def get_dashboard_data():
     }
     
     return jsonify(data)
+
+@bp.route('/whatsapp-webhook', methods=['POST'])
+def whatsapp_webhook():
+    message_data = request.json
+    result = process_whatsapp_message(message_data)
+    return jsonify({"status": "success", "result": result}), 200
