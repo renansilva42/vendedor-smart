@@ -5,6 +5,5 @@ supabase
 openai>=1.0.0
 pytz
 openai==1.3.0
-Flask==2.x.x
 Flask-SQLAlchemy==3.x.x
 psycopg2-binary==2.x.x
