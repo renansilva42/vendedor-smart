@@ -233,3 +233,15 @@ def whatsapp_webhook():
     else:
         logger.warning(f"Método não permitido: {request.method}")
         return jsonify({"status": "error", "message": "Método não permitido"}), 405
+    
+@bp.route('/generate_analysis')
+@login_required
+def generate_analysis():
+    # Buscar mensagens do Supabase
+    messages = Message.get_whatsapp_messages()
+    
+    # Gerar resumo usando o assistente ASSISTANT_ID_WHATSAPP
+    chatbot = Chatbot('whatsapp')
+    summary = chatbot.generate_summary(messages)
+    
+    return jsonify({'summary': summary})

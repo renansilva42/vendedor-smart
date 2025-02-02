@@ -252,5 +252,14 @@ class Message:
         # Implemente a lógica para analisar o posicionamento do vendedor
         # Isso pode envolver comparação das mensagens do vendedor com os valores da empresa
         return "O vendedor demonstra bom alinhamento com os valores da empresa, mas pode melhorar na comunicação da proposta de valor."
+    
+    @staticmethod
+    def get_whatsapp_messages():
+        try:
+            response = supabase.table('whatsapp_messages').select('*').order('timestamp', desc=True).limit(100).execute()
+            return response.data
+        except Exception as e:
+            print(f"Erro ao buscar mensagens do WhatsApp: {e}")
+            return []
 
 # Remova ou comente as funções de exemplo no final do arquivo, se não forem mais necessárias

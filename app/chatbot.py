@@ -1,16 +1,19 @@
 from openai import OpenAI
 from config import Config
 import time
-from typing import Optional
+from typing import Optional, List, Dict
 
 client = OpenAI(api_key=Config.OPENAI_API_KEY)
 
 class Chatbot:
     def __init__(self, chatbot_type: str):
+        self.chatbot_type = chatbot_type
         if chatbot_type == "atual":
             self.assistant_id = Config.ASSISTANT_ID_VENDAS
         elif chatbot_type == "novo":
             self.assistant_id = Config.ASSISTANT_ID_TREINAMENTO
+        elif chatbot_type == "whatsapp":
+            self.assistant_id = Config.ASSISTANT_ID_WHATSAPP
         else:
             raise ValueError(f"Tipo de chatbot inválido: {chatbot_type}")
 
@@ -80,6 +83,44 @@ class Chatbot:
         except Exception as e:
             print(f"Erro ao extrair nome: {e}")
             return None
+
+    def generate_summary(self, messages: List[Dict[str, str]]) -> str:
+        try:
+            print("Iniciando geração de resumo das mensagens do WhatsApp")
+            thread = self.create_thread()
+            print(f"Thread criada para resumo: {thread}")
+
+            # Adicionar as mensagens à thread
+            for message in messages:
+                client.beta.threads.messages.create(
+                    thread_id=thread,
+                    role="user",
+                    content=f"Sender: {message['sender_name']}\nContent: {message['content']}"
+                )
+
+            # Executar o assistente
+            run = client.beta.threads.runs.create(
+                thread_id=thread,
+                assistant_id=self.assistant_id,
+                instructions="Por favor, faça um resumo das mensagens do WhatsApp, destacando os principais tópicos discutidos, tendências e insights importantes."
+            )
+            print(f"Run criada para resumo: {run.id}")
+
+            self._wait_for_run_completion(thread, run.id)
+            print("Run de resumo completada")
+
+            # Recuperar a resposta do assistente
+            messages = client.beta.threads.messages.list(thread_id=thread)
+            if messages.data and messages.data[0].content:
+                summary = messages.data[0].content[0].text.value
+                print("Resumo gerado com sucesso")
+                return summary
+            else:
+                print("Nenhuma resposta válida do assistente para o resumo")
+                return "Não foi possível gerar um resumo das mensagens."
+        except Exception as e:
+            print(f"Erro ao gerar resumo: {e}")
+            return f"Erro ao gerar resumo: {str(e)}"
 
     def _wait_for_run_completion(self, thread_id: str, run_id: str, timeout: int = 30):
         # Aguarda a conclusão da execução do assistente

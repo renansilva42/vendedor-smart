@@ -33,6 +33,11 @@
                 <h2>Posicionamento</h2>
                 <p id="posicionamento">Carregando...</p>
             </div>
+            <div class="dashboard-item">
+                <h2>Análise de Mensagens</h2>
+                <button id="update-analysis-btn" onclick="updateAnalysis()">Atualizar análise</button>
+                <p id="analysis-summary">Clique no botão acima para gerar a análise.</p>
+            </div>
         </div>
     </div>
 
@@ -106,6 +111,20 @@
 
         // Carregar dados do dashboard ao iniciar a página
         window.onload = loadDashboardData;
+    </script>
+
+    <script>
+    function updateAnalysis() {
+        document.getElementById('analysis-summary').textContent = 'Gerando análise...';
+        axios.get('/generate_analysis')
+            .then(response => {
+                document.getElementById('analysis-summary').textContent = response.data.summary;
+            })
+            .catch(error => {
+                console.error('Erro ao gerar análise:', error);
+                document.getElementById('analysis-summary').textContent = 'Erro ao gerar análise. Tente novamente.';
+            });
+    }
     </script>
 </body>
 </html>
