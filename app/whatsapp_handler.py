@@ -21,21 +21,21 @@ def process_whatsapp_message(message_data):
         user_number = message_data.get('data', {}).get('key', {}).get('remoteJid', 'Desconhecido')
         user_name = message_data.get('data', {}).get('pushName', 'Desconhecido')
         
-        webhook_number = message_data.get('instance', 'Desconhecido')
-        webhook_name = 'Webhook'
+        webhook_instance = message_data.get('instance', 'Desconhecido')
+        webhook_number = message_data.get('sender', 'Desconhecido')  # Assumindo que 'sender' contém o número do webhook
         
         is_from_webhook = message_data.get('data', {}).get('key', {}).get('fromMe', False)
 
         # Determinar sender e receiver baseado em quem enviou a mensagem
         if is_from_webhook:
-            sender_name = webhook_name
+            sender_name = webhook_instance
             sender_number = webhook_number
             receiver_name = user_name
             receiver_number = user_number
         else:
             sender_name = user_name
             sender_number = user_number
-            receiver_name = webhook_name
+            receiver_name = webhook_instance
             receiver_number = webhook_number
 
         message_content = message_data.get('data', {}).get('message', {}).get('conversation', '')
