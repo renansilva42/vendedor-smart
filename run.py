@@ -1,8 +1,6 @@
 from app import create_app
 from app.models import supabase
 import sys
-from app import app
-from app.webhook_handler import webhook  # Importe a função do webhook
 
 # Teste de conexão com o Supabase
 try:

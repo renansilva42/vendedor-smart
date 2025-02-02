@@ -1,7 +1,5 @@
 from flask import Flask
 from config import Config
-from app import app
-from app.webhook_handler import webhook  # Importe a função do webhook
 
 def create_app():
     app = Flask(__name__)
