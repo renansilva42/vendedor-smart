@@ -3,12 +3,9 @@ from supabase import create_client
 from config import Config
 from datetime import datetime, timezone
 
-# Configuração de logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Inicializar o cliente Supabase
-logger.info(f"Tentando conectar ao Supabase: {Config.SUPABASE_URL}")
 try:
     supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
     logger.info("Conexão com Supabase estabelecida com sucesso")
@@ -18,35 +15,39 @@ except Exception as e:
 def process_whatsapp_message(message_data):
     logger.info("Iniciando processamento da mensagem do WhatsApp")
     try:
-        # Extrair informações relevantes da mensagem
         logger.debug(f"Dados da mensagem: {message_data}")
         
-        # Adapte estas linhas de acordo com a estrutura real dos dados recebidos
-        sender = message_data.get('sender', 'Desconhecido')
+        # Extrair informações do remetente e destinatário
+        sender = message_data.get('data', {}).get('key', {}).get('remoteJid', 'Desconhecido')
+        receiver = message_data.get('instance', 'Desconhecido')
+        is_from_me = message_data.get('data', {}).get('key', {}).get('fromMe', False)
+
+        # Se a mensagem for enviada pelo webhook, trocar sender e receiver
+        if is_from_me:
+            sender, receiver = receiver, sender
+
         message_content = message_data.get('data', {}).get('message', {}).get('conversation', '')
         
-        # Use o timestamp fornecido ou gere um novo se não existir ou for inválido
         timestamp = message_data.get('date_time')
         try:
             if timestamp:
-                # Tenta converter o timestamp para um objeto datetime
                 datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
             else:
                 raise ValueError("Timestamp não fornecido")
         except (ValueError, AttributeError):
-            # Se a conversão falhar ou o timestamp não for fornecido, use o tempo atual
             timestamp = datetime.now(timezone.utc).isoformat()
         
-        logger.info(f"Mensagem recebida de: {sender}")
+        logger.info(f"Mensagem de {sender} para {receiver}")
         logger.debug(f"Conteúdo da mensagem: {message_content}")
         logger.debug(f"Timestamp: {timestamp}")
 
-        # Preparar os dados para inserção no Supabase
         whatsapp_message = {
             'sender': sender,
+            'receiver': receiver,
             'content': message_content,
             'timestamp': timestamp,
-            'raw_data': message_data  # Armazenar o payload completo para referência futura
+            'is_from_webhook': is_from_me,
+            'raw_data': message_data
         }
 
         logger.info("Tentando inserir mensagem no Supabase")
