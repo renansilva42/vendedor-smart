@@ -18,13 +18,17 @@ def process_whatsapp_message(message_data):
         logger.debug(f"Dados da mensagem: {message_data}")
         
         # Extrair informações do remetente e destinatário
-        sender = message_data.get('data', {}).get('key', {}).get('remoteJid', 'Desconhecido')
+        sender_number = message_data.get('data', {}).get('key', {}).get('remoteJid', 'Desconhecido')
         receiver = message_data.get('instance', 'Desconhecido')
         is_from_me = message_data.get('data', {}).get('key', {}).get('fromMe', False)
 
+        # Obter o nome do contato, se disponível
+        sender_name = message_data.get('data', {}).get('pushName')
+        
         # Se a mensagem for enviada pelo webhook, trocar sender e receiver
         if is_from_me:
-            sender, receiver = receiver, sender
+            sender_number, receiver = receiver, sender_number
+            sender_name = "Webhook"  # ou o nome que você quiser dar ao seu sistema
 
         message_content = message_data.get('data', {}).get('message', {}).get('conversation', '')
         
@@ -37,12 +41,13 @@ def process_whatsapp_message(message_data):
         except (ValueError, AttributeError):
             timestamp = datetime.now(timezone.utc).isoformat()
         
-        logger.info(f"Mensagem de {sender} para {receiver}")
+        logger.info(f"Mensagem de {sender_name or sender_number} para {receiver}")
         logger.debug(f"Conteúdo da mensagem: {message_content}")
         logger.debug(f"Timestamp: {timestamp}")
 
         whatsapp_message = {
-            'sender': sender,
+            'sender_number': sender_number,
+            'sender_name': sender_name,
             'receiver': receiver,
             'content': message_content,
             'timestamp': timestamp,
