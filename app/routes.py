@@ -190,6 +190,18 @@ def get_dashboard_data():
 
 @bp.route('/whatsapp-webhook', methods=['POST'])
 def whatsapp_webhook():
-    message_data = request.json
-    result = process_whatsapp_message(message_data)
-    return jsonify({"status": "success", "result": result}), 200
+    try:
+        message_data = request.json
+        if not message_data:
+            return jsonify({"status": "error", "message": "Dados não fornecidos"}), 400
+
+        result = process_whatsapp_message(message_data)
+        
+        if result["status"] == "success":
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 500
+
+    except Exception as e:
+        print(f"Erro no webhook do WhatsApp: {e}")
+        return jsonify({"status": "error", "message": "Erro interno do servidor"}), 500

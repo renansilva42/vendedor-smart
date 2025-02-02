@@ -1,44 +1,34 @@
-from openai import OpenAI
+from supabase import create_client
 from config import Config
 
-client = OpenAI(api_key=Config.OPENAI_API_KEY)
+# Inicializar o cliente Supabase
+supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
 
 def process_whatsapp_message(message_data):
     try:
-        # Criar uma nova thread para cada conversa
-        thread = client.beta.threads.create()
+        # Extrair informações relevantes da mensagem
+        sender = message_data.get('from', 'Desconhecido')
+        message_content = message_data.get('text', {}).get('body', '')
+        timestamp = message_data.get('timestamp', '')
 
-        # Adicionar a mensagem do usuário à thread
-        client.beta.threads.messages.create(
-            thread_id=thread.id,
-            role="user",
-            content=message_data
-        )
+        # Preparar os dados para inserção no Supabase
+        whatsapp_message = {
+            'sender': sender,
+            'content': message_content,
+            'timestamp': timestamp,
+            'raw_data': message_data  # Armazenar o payload completo para referência futura
+        }
 
-        # Executar o assistente específico do WhatsApp
-        run = client.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=Config.ASSISTANT_ID_WHATSAPP
-        )
+        # Inserir a mensagem no Supabase
+        result = supabase.table('whatsapp_messages').insert(whatsapp_message).execute()
 
-        # Aguardar a conclusão da execução
-        while run.status not in ["completed", "failed"]:
-            run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
-
-        if run.status == "failed":
-            return "Desculpe, ocorreu um erro ao processar sua mensagem."
-
-        # Recuperar a resposta do assistente
-        messages = client.beta.threads.messages.list(thread_id=thread.id)
-        assistant_messages = [msg for msg in messages if msg.role == "assistant"]
-
-        if assistant_messages:
-            # Pega a mensagem mais recente do assistente
-            latest_message = assistant_messages[0]
-            return latest_message.content[0].text.value
+        if result.data:
+            print(f"Mensagem do WhatsApp armazenada com sucesso. ID: {result.data[0]['id']}")
+            return {"status": "success", "message": "Mensagem armazenada com sucesso"}
         else:
-            return "Não foi possível obter uma resposta do assistente."
+            print("Falha ao armazenar a mensagem do WhatsApp")
+            return {"status": "error", "message": "Falha ao armazenar a mensagem"}
 
     except Exception as e:
-        print(f"Erro ao processar mensagem: {e}")
-        return "Ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde."
+        print(f"Erro ao processar mensagem do WhatsApp: {e}")
+        return {"status": "error", "message": "Erro ao processar a mensagem"}
