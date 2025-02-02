@@ -1,6 +1,7 @@
 import logging
 from supabase import create_client
 from config import Config
+from datetime import datetime, timezone
 
 # Configuração de logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -21,10 +22,14 @@ def process_whatsapp_message(message_data):
         logger.debug(f"Dados da mensagem: {message_data}")
         
         # Adapte estas linhas de acordo com a estrutura real dos dados recebidos
-        sender = message_data.get('from', 'Desconhecido')
-        message_content = message_data.get('text', {}).get('body', '')
-        timestamp = message_data.get('timestamp', '')
-
+        sender = message_data.get('sender', 'Desconhecido')
+        message_content = message_data.get('data', {}).get('message', {}).get('conversation', '')
+        
+        # Use o timestamp fornecido ou gere um novo se não existir
+        timestamp = message_data.get('date_time')
+        if not timestamp:
+            timestamp = datetime.now(timezone.utc).isoformat()
+        
         logger.info(f"Mensagem recebida de: {sender}")
         logger.debug(f"Conteúdo da mensagem: {message_content}")
         logger.debug(f"Timestamp: {timestamp}")
