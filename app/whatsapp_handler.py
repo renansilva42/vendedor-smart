@@ -18,18 +18,25 @@ def process_whatsapp_message(message_data):
         logger.debug(f"Dados da mensagem: {message_data}")
         
         # Extrair informações do remetente e destinatário
-        sender_number = message_data.get('data', {}).get('key', {}).get('remoteJid', 'Desconhecido')
-        sender_name = message_data.get('data', {}).get('pushName', 'Desconhecido')
+        user_number = message_data.get('data', {}).get('key', {}).get('remoteJid', 'Desconhecido')
+        user_name = message_data.get('data', {}).get('pushName', 'Desconhecido')
         
-        receiver_number = message_data.get('instance', 'Desconhecido')
-        receiver_name = 'Webhook'  # Você pode ajustar isso conforme necessário
+        webhook_number = message_data.get('instance', 'Desconhecido')
+        webhook_name = 'Webhook'
         
-        is_from_me = message_data.get('data', {}).get('key', {}).get('fromMe', False)
+        is_from_webhook = message_data.get('data', {}).get('key', {}).get('fromMe', False)
 
-        # Se a mensagem for enviada pelo webhook, trocar sender e receiver
-        if is_from_me:
-            sender_number, receiver_number = receiver_number, sender_number
-            sender_name, receiver_name = receiver_name, sender_name
+        # Determinar sender e receiver baseado em quem enviou a mensagem
+        if is_from_webhook:
+            sender_name = webhook_name
+            sender_number = webhook_number
+            receiver_name = user_name
+            receiver_number = user_number
+        else:
+            sender_name = user_name
+            sender_number = user_number
+            receiver_name = webhook_name
+            receiver_number = webhook_number
 
         message_content = message_data.get('data', {}).get('message', {}).get('conversation', '')
         
@@ -57,7 +64,7 @@ def process_whatsapp_message(message_data):
             'receiver_number': receiver_number,
             'timestamp': timestamp_str,
             'raw_data': message_data,
-            'is_from_webhook': is_from_me
+            'is_from_webhook': is_from_webhook
         }
 
         logger.info("Tentando inserir mensagem no Supabase")
