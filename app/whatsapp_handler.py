@@ -42,9 +42,12 @@ def process_whatsapp_message(message_data):
         except (ValueError, AttributeError):
             timestamp = datetime.now(timezone.utc)
         
+        # Converter timestamp para string ISO 8601
+        timestamp_str = timestamp.isoformat()
+        
         logger.info(f"Mensagem de {sender_name} ({sender_number}) para {receiver_name} ({receiver_number})")
         logger.debug(f"Conteúdo da mensagem: {message_content}")
-        logger.debug(f"Timestamp: {timestamp}")
+        logger.debug(f"Timestamp: {timestamp_str}")
 
         whatsapp_message = {
             'sender_name': sender_name,
@@ -52,7 +55,7 @@ def process_whatsapp_message(message_data):
             'content': message_content,
             'receiver_name': receiver_name,
             'receiver_number': receiver_number,
-            'timestamp': timestamp,
+            'timestamp': timestamp_str,
             'raw_data': message_data,
             'is_from_webhook': is_from_me
         }
