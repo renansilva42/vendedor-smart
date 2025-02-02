@@ -25,9 +25,16 @@ def process_whatsapp_message(message_data):
         sender = message_data.get('sender', 'Desconhecido')
         message_content = message_data.get('data', {}).get('message', {}).get('conversation', '')
         
-        # Use o timestamp fornecido ou gere um novo se não existir
+        # Use o timestamp fornecido ou gere um novo se não existir ou for inválido
         timestamp = message_data.get('date_time')
-        if not timestamp:
+        try:
+            if timestamp:
+                # Tenta converter o timestamp para um objeto datetime
+                datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            else:
+                raise ValueError("Timestamp não fornecido")
+        except (ValueError, AttributeError):
+            # Se a conversão falhar ou o timestamp não for fornecido, use o tempo atual
             timestamp = datetime.now(timezone.utc).isoformat()
         
         logger.info(f"Mensagem recebida de: {sender}")
@@ -43,6 +50,7 @@ def process_whatsapp_message(message_data):
         }
 
         logger.info("Tentando inserir mensagem no Supabase")
+        logger.debug(f"Dados a serem inseridos: {whatsapp_message}")
         result = supabase.table('whatsapp_messages').insert(whatsapp_message).execute()
         
         if result.data:
