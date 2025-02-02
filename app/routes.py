@@ -5,6 +5,7 @@ import uuid
 from functools import wraps
 from .whatsapp_handler import process_whatsapp_message
 
+
 bp = Blueprint('main', __name__)
 
 def login_required(f):
@@ -188,20 +189,29 @@ def get_dashboard_data():
     
     return jsonify(data)
 
-@bp.route('/whatsapp-webhook', methods=['POST'])
+@bp.route('/whatsapp-webhook', methods=['POST', 'GET'])
 def whatsapp_webhook():
-    try:
-        message_data = request.json
-        if not message_data:
-            return jsonify({"status": "error", "message": "Dados não fornecidos"}), 400
+    if request.method == 'GET':
+        # Responder a solicitações GET com uma mensagem informativa
+        return jsonify({
+            "status": "active",
+            "message": "Este é o endpoint do webhook do WhatsApp. Use POST para enviar dados."
+        }), 200
 
-        result = process_whatsapp_message(message_data)
-        
-        if result["status"] == "success":
-            return jsonify(result), 200
-        else:
-            return jsonify(result), 500
+    elif request.method == 'POST':
+        try:
+            message_data = request.json
+            if not message_data:
+                return jsonify({"status": "error", "message": "Dados não fornecidos"}), 400
 
-    except Exception as e:
-        print(f"Erro no webhook do WhatsApp: {e}")
-        return jsonify({"status": "error", "message": "Erro interno do servidor"}), 500
+            result = process_whatsapp_message(message_data)
+            
+            return jsonify({"status": "success", "result": result}), 200
+
+        except Exception as e:
+            print(f"Erro no webhook do WhatsApp: {e}")
+            return jsonify({"status": "error", "message": "Erro interno do servidor"}), 500
+
+    else:
+        # Isso não deve acontecer devido à restrição de métodos, mas é uma boa prática incluir
+        return jsonify({"status": "error", "message": "Método não permitido"}), 405
