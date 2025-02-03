@@ -99,7 +99,7 @@ class Chatbot:
 
             # Fazer a chamada para o chat completion
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",  # ou o modelo que você preferir
+                model="gpt-4o-mini-2024-07-18",  # ou o modelo que você preferir
                 messages=[
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message}
