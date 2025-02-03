@@ -37,13 +37,17 @@ def login():
         return jsonify({'success': False, 'error': 'Email e senha são obrigatórios'}), 400
 
     if Auth.verify_credentials(email, password):
-        session['authenticated'] = True
         user = User.get_or_create_by_email(email)
-        session['user_id'] = user['id']
-        session['user_email'] = email
-        session['chatbot_type'] = 'atual'
-        logger.info(f"Login bem-sucedido. User ID: {user['id']}, Nome: {user.get('name', 'Não definido')}, Email: {email}, Login Count: {user.get('login_count', 1)}")
-        return jsonify({'success': True, 'login_count': user.get('login_count', 1)})
+        if user and 'error' not in user:
+            session['authenticated'] = True
+            session['user_id'] = user['id']
+            session['user_email'] = email
+            session['chatbot_type'] = 'atual'
+            logger.info(f"Login bem-sucedido. User ID: {user['id']}, Nome: {user.get('name', 'Não definido')}, Email: {email}, Login Count: {user.get('login_count', 1)}")
+            return jsonify({'success': True, 'login_count': user.get('login_count', 1)})
+        else:
+            logger.error(f"Erro ao obter/criar usuário: {user.get('error')}")
+            return jsonify({'success': False, 'error': 'Erro interno'}), 500
     else:
         logger.warning(f"Falha na autenticação para o email: {email}")
         return jsonify({'success': False, 'error': 'Credenciais inválidas'}), 401
@@ -123,13 +127,18 @@ def send_message():
 
     response = chatbot.send_message(thread_id, message)
     
-    assistant_message = Message.create(thread_id, 'assistant', response, None, chatbot_type, 'Assistente IA')
+    if isinstance(response, dict):
+        assistant_response = response.get('response', 'Desculpe, não foi possível gerar uma resposta.')
+    else:
+        assistant_response = response
+
+    assistant_message = Message.create(thread_id, 'assistant', assistant_response, None, chatbot_type, 'Assistente IA')
     if assistant_message:
         logger.info(f"Mensagem do assistente criada: {assistant_message}")
     else:
         logger.warning("Falha ao criar mensagem do assistente")
 
-    return jsonify({'response': response, 'user_name': current_user_name})
+    return jsonify({'response': assistant_response, 'user_name': current_user_name})
 
 @bp.route('/new_user', methods=['POST'])
 @login_required
@@ -185,14 +194,17 @@ def get_dashboard_data():
     ia_feedback = Message.get_ia_feedback(user_id)
     posicionamento = Message.analyze_positioning(user_id)
     
-    data = {
-        'login_count': login_count,
-        'lead_score': scores['lead_score'],
-        'ia_conversation_score': scores['ia_conversation_score'],
-        'ia_evaluation_score': scores['ia_evaluation_score'],
-        'ia_feedback': ia_feedback,
-        'posicionamento': posicionamento
-    }
+    if isinstance(scores, dict):
+        data = {
+            'login_count': login_count,
+            'lead_score': scores.get('lead_score', 0),
+            'ia_conversation_score': scores.get('ia_conversation_score', 0),
+            'ia_evaluation_score': scores.get('ia_evaluation_score', 0),
+            'ia_feedback': ia_feedback,
+            'posicionamento': posicionamento
+        }
+    else:
+        data = {'error': 'Dados não disponíveis'}
     
     logger.info(f"Dados do dashboard obtidos para user_id: {user_id}")
     return jsonify(data)
@@ -220,8 +232,18 @@ def whatsapp_webhook():
                 logger.warning("Nenhum dado fornecido na requisição POST")
                 return jsonify({"status": "error", "message": "Dados não fornecidos"}), 400
 
+            if 'messages' not in message_data:
+                logger.warning("Estrutura de dados inválida")
+                return jsonify({"status": "error", "message": "Formato de mensagem inválido"}), 400
+
+            processed_data = {
+                'sender': message_data.get('from'),
+                'content': message_data.get('text', {}).get('body'),
+                'timestamp': message_data.get('timestamp')
+            }
+
             logger.info("Processando mensagem do WhatsApp")
-            result = process_whatsapp_message(message_data)
+            result = process_whatsapp_message(processed_data)
             logger.info(f"Resultado do processamento: {result}")
             
             return jsonify({"status": "success", "result": result}), 200
@@ -246,11 +268,15 @@ def generate_analysis():
         summary = chatbot.generate_summary(messages)
         logger.info("Resumo gerado com sucesso")
         
-        # Envolver o resumo em uma estrutura HTML básica
+        if isinstance(summary, dict):
+            formatted_summary = summary.get('response', '')
+        else:
+            formatted_summary = summary
+        
         formatted_summary = f"""
         <div class="analysis-summary">
             <h2>Análise de Mensagens do WhatsApp</h2>
-            {summary}
+            {formatted_summary}
         </div>
         """
         
