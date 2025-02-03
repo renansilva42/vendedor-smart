@@ -285,3 +285,40 @@ button:hover {
   width: 100%;
   height: 300px;
 }
+
+.analysis-summary {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.analysis-summary h2 {
+  color: #007bff;
+  margin-bottom: 15px;
+}
+
+.analysis-summary h3 {
+  color: #28a745;
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+.analysis-summary p {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.analysis-summary ul {
+  padding-left: 20px;
+}
+
+.analysis-summary li {
+  margin-bottom: 5px;
+}
+
+.analysis-summary strong {
+  font-weight: 600;
+  color: #0056b3;
+}

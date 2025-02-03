@@ -115,14 +115,14 @@
 
     <script>
     function updateAnalysis() {
-        document.getElementById('analysis-summary').textContent = 'Gerando análise...';
+        document.getElementById('analysis-summary').innerHTML = 'Gerando análise...';
         axios.get('/generate_analysis')
             .then(response => {
-                document.getElementById('analysis-summary').textContent = response.data.summary;
+                document.getElementById('analysis-summary').innerHTML = response.data.summary;
             })
             .catch(error => {
                 console.error('Erro ao gerar análise:', error);
-                document.getElementById('analysis-summary').textContent = 'Erro ao gerar análise. Tente novamente.';
+                document.getElementById('analysis-summary').innerHTML = 'Erro ao gerar análise. Tente novamente.';
             });
     }
     </script>
