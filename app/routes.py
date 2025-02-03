@@ -233,15 +233,22 @@ def whatsapp_webhook():
     else:
         logger.warning(f"Método não permitido: {request.method}")
         return jsonify({"status": "error", "message": "Método não permitido"}), 405
-    
+
 @bp.route('/generate_analysis')
 @login_required
 def generate_analysis():
-    # Buscar mensagens do Supabase
-    messages = Message.get_whatsapp_messages()
-    
-    # Gerar resumo usando o assistente ASSISTANT_ID_WHATSAPP
-    chatbot = Chatbot('whatsapp')
-    summary = chatbot.generate_summary(messages)
-    
-    return jsonify({'summary': summary})
+    logger.info("Iniciando geração de análise")
+    try:
+        # Buscar mensagens do Supabase
+        messages = Message.get_whatsapp_messages()
+        logger.info(f"Obtidas {len(messages)} mensagens do WhatsApp")
+        
+        # Gerar resumo usando o chat completion
+        chatbot = Chatbot('whatsapp')  # O tipo 'whatsapp' não é mais relevante, mas mantemos por compatibilidade
+        summary = chatbot.generate_summary(messages)
+        logger.info("Resumo gerado com sucesso")
+        
+        return jsonify({'summary': summary})
+    except Exception as e:
+        logger.error(f"Erro ao gerar análise: {e}", exc_info=True)
+        return jsonify({'error': 'Erro ao gerar análise'}), 500

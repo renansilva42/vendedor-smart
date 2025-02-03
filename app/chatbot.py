@@ -87,37 +87,30 @@ class Chatbot:
     def generate_summary(self, messages: List[Dict[str, str]]) -> str:
         try:
             print("Iniciando geração de resumo das mensagens do WhatsApp")
-            thread = self.create_thread()
-            print(f"Thread criada para resumo: {thread}")
-
-            # Adicionar as mensagens à thread
+            
+            # Preparar o prompt para o chat completion
+            system_message = """Você é um assistente especializado em monitorar e resumir conversas do WhatsApp. 
+            Sua tarefa é analisar mensagens, identificar tópicos principais, e criar resumos concisos quando solicitado. 
+            Mantenha a privacidade, não mencione nomes ou informações pessoais nos resumos."""
+            
+            user_message = "Por favor, faça um resumo das seguintes mensagens do WhatsApp, destacando os principais tópicos discutidos, tendências e insights importantes:\n\n"
             for message in messages:
-                client.beta.threads.messages.create(
-                    thread_id=thread,
-                    role="user",
-                    content=f"Sender: {message['sender_name']}\nContent: {message['content']}"
-                )
+                user_message += f"Remetente: {message['sender_name']}\nConteúdo: {message['content']}\n\n"
 
-            # Executar o assistente
-            run = client.beta.threads.runs.create(
-                thread_id=thread,
-                assistant_id=self.assistant_id,
-                instructions="Por favor, faça um resumo das mensagens do WhatsApp, destacando os principais tópicos discutidos, tendências e insights importantes."
+            # Fazer a chamada para o chat completion
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",  # ou o modelo que você preferir
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_message}
+                ],
+                max_tokens=500  # Ajuste conforme necessário
             )
-            print(f"Run criada para resumo: {run.id}")
 
-            self._wait_for_run_completion(thread, run.id)
-            print("Run de resumo completada")
+            summary = response.choices[0].message.content
+            print("Resumo gerado com sucesso")
+            return summary
 
-            # Recuperar a resposta do assistente
-            messages = client.beta.threads.messages.list(thread_id=thread)
-            if messages.data and messages.data[0].content:
-                summary = messages.data[0].content[0].text.value
-                print("Resumo gerado com sucesso")
-                return summary
-            else:
-                print("Nenhuma resposta válida do assistente para o resumo")
-                return "Não foi possível gerar um resumo das mensagens."
         except Exception as e:
             print(f"Erro ao gerar resumo: {e}")
             return f"Erro ao gerar resumo: {str(e)}"
