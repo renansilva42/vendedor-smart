@@ -7,107 +7,26 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 </head>
 <body>
     <div class="chat-header">
         <h1>Chat com IA - {{ 'Especialista em Métodos de Venda' if chatbot_type == 'atual' else 'Treinamento de Vendas' }}</h1>
         <div class="header-buttons">
-            <button id="back-btn" onclick="goBack()">Voltar</button>
-            <button id="logout-btn" onclick="logout()">Logout</button>
+            <button id="back-btn">Voltar</button>
+            <button id="logout-btn">Logout</button>
         </div>
     </div>
     <div id="chat-container"></div>
     <div class="input-container">
         <input type="text" id="user-input" placeholder="Digite sua mensagem...">
-        <button onclick="sendMessage()">Enviar</button>
+        <button id="send-btn">Enviar</button>
     </div>
-    <button id="new-user-btn" onclick="newUser()">Novo Usuário</button>
+    <button id="new-user-btn">Novo Usuário</button>
 
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
         const chatbotType = "{{ chatbot_type }}";
-
-        function sendMessage() {
-            const userInput = document.getElementById('user-input');
-            const message = userInput.value;
-            userInput.value = '';
-
-            if (message.trim() === '') return;
-
-            displayMessage('Você', message);
-
-            axios.post('/send_message', { 
-                message: message,
-                chatbot_type: chatbotType
-            })
-            .then(response => {
-                displayMessage('IA', response.data.response);
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                displayMessage('Erro', 'Ocorreu um erro ao processar sua mensagem.');
-            });
-        }
-
-        function displayMessage(sender, message) {
-            const chatContainer = document.getElementById('chat-container');
-            const messageElement = document.createElement('div');
-            messageElement.className = `message ${sender.toLowerCase()}-message`;
-            messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
-            chatContainer.appendChild(messageElement);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        function newUser() {
-            axios.post('/new_user')
-                .then(() => {
-                    document.getElementById('chat-container').innerHTML = '';
-                    displayMessage('Sistema', 'Nova conversa iniciada.');
-                })
-                .catch(error => {
-                    console.error('Erro:', error);
-                    displayMessage('Erro', 'Ocorreu um erro ao criar um novo usuário.');
-                });
-        }
-
-        function logout() {
-            axios.get('/logout')
-                .then(() => {
-                    window.location.href = "{{ url_for('main.index') }}";
-                })
-                .catch(error => {
-                    console.error('Erro ao fazer logout:', error);
-                });
-        }
-
-        function goBack() {
-            window.location.href = "{{ url_for('main.select_chatbot') }}";
-        }
-
-        // Adicionar evento de tecla para enviar mensagem com Enter
-        document.getElementById('user-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        // Carregar histórico de mensagens ao iniciar
-        window.onload = function() {
-            axios.get('/get_chat_history', {
-                params: {
-                    chatbot_type: chatbotType
-                }
-            })
-            .then(response => {
-                const messages = response.data;
-                messages.forEach(msg => {
-                    displayMessage(msg.role === 'user' ? 'Você' : 'IA', msg.content);
-                });
-            })
-            .catch(error => {
-                console.error('Erro ao carregar histórico:', error);
-            });
-        };
     </script>
 </body>
 </html>

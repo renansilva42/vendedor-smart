@@ -1,36 +1,15 @@
-// Importe a biblioteca marked.js
-import marked from 'marked';
-
-// Função para exibir a resposta da IA
 function displayMessage(sender, message) {
     const chatContainer = document.getElementById('chat-container');
     const messageElement = document.createElement('div');
     messageElement.className = `message ${sender.toLowerCase()}-message`;
 
     // Converta o texto Markdown para HTML
-    const html = marked(message);
+    const html = marked.parse(message);
 
     // Exiba o HTML no navegador
     messageElement.innerHTML = `<strong>${sender}:</strong> ${html}`;
     chatContainer.appendChild(messageElement);
     chatContainer.scrollTop = chatContainer.scrollHeight;
-}
-
-function initChat(chatbotType) {
-    loadChatHistory(chatbotType);
-    setupEventListeners();
-}
-
-function setupEventListeners() {
-    document.getElementById('user-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            sendMessage();
-        }
-    });
-    document.getElementById('send-btn').addEventListener('click', sendMessage);
-    document.getElementById('back-btn').addEventListener('click', goBack);
-    document.getElementById('logout-btn').addEventListener('click', logout);
-    document.getElementById('new-user-btn').addEventListener('click', newUser);
 }
 
 function sendMessage() {
@@ -56,15 +35,6 @@ function sendMessage() {
         console.error('Erro:', error);
         displayMessage('Erro', 'Ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.');
     });
-}
-
-function displayMessage(sender, message) {
-    const chatContainer = document.getElementById('chat-container');
-    const messageElement = document.createElement('div');
-    messageElement.className = `message ${sender.toLowerCase()}-message`;
-    messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
-    chatContainer.appendChild(messageElement);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
 function showTypingIndicator() {
@@ -117,7 +87,7 @@ function loadChatHistory(chatbotType) {
     })
     .then(response => {
         const messages = response.data;
-        messages.reverse().forEach(msg => {
+        messages.forEach(msg => {
             displayMessage(msg.role === 'user' ? 'Você' : 'IA', msg.content);
         });
     })
@@ -126,3 +96,24 @@ function loadChatHistory(chatbotType) {
         displayMessage('Erro', 'Não foi possível carregar o histórico de mensagens.');
     });
 }
+
+function setupEventListeners() {
+    document.getElementById('user-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+    document.getElementById('send-btn').addEventListener('click', sendMessage);
+    document.getElementById('back-btn').addEventListener('click', goBack);
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    document.getElementById('new-user-btn').addEventListener('click', newUser);
+}
+
+function initChat(chatbotType) {
+    loadChatHistory(chatbotType);
+    setupEventListeners();
+}
+
+window.onload = function() {
+    initChat(chatbotType);
+};
