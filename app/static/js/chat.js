@@ -1,3 +1,21 @@
+// Importe a biblioteca marked.js
+import marked from 'marked';
+
+// Função para exibir a resposta da IA
+function displayMessage(sender, message) {
+    const chatContainer = document.getElementById('chat-container');
+    const messageElement = document.createElement('div');
+    messageElement.className = `message ${sender.toLowerCase()}-message`;
+
+    // Converta o texto Markdown para HTML
+    const html = marked(message);
+
+    // Exiba o HTML no navegador
+    messageElement.innerHTML = `<strong>${sender}:</strong> ${html}`;
+    chatContainer.appendChild(messageElement);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
 function initChat(chatbotType) {
     loadChatHistory(chatbotType);
     setupEventListeners();

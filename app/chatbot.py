@@ -55,7 +55,7 @@ class ChatbotManager:
         """Cria ou obtém auxiliares, validando ferramentas."""
         assistants_map = {
             "atual": {
-                "name": "Assistente de Vendas",
+                "name": "Assistente de Vendas (Mentor)",
                 "functions": ["query_whatsapp_messages", "log_interaction"],
                 "model": "gpt-4o-mini-2024-07-18",
                 "instructions": (
@@ -68,10 +68,10 @@ class ChatbotManager:
                 "id": Config.ASSISTANT_ID_VENDAS
             },
             "novo": {
-                "name": "Assistente de Treinamento",
+                "name": "Simulador de Vendas",
                 "functions": ["log_interaction"],
                 "model": "gpt-4o-mini-2024-07-18",
-                "instructions": "Você é um tutor especializado em treinamento corporativo.",
+                "instructions": "Você é um cliente interessado em comprar uma passagem aérea, com o objetivo de treinar um vendedor da companhia aérea em seu processo de vendas.",
                 "id": Config.ASSISTANT_ID_TREINAMENTO
             },
             "whatsapp": {
@@ -117,33 +117,15 @@ class ChatbotManager:
         functions = {
             "query_whatsapp_messages": {
                 "name": "query_whatsapp_messages",
-                "description": "Consulta mensagens antigas do WhatsApp com filtros",
+                "description": "Consulta históricos do WhatsApp com filtros por remetente, conteúdo e datas",
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "sender_name": {
-                            "type": "string",
-                            "description": "Nome parcial ou completo do remetente"
-                        },
-                        "content": {
-                            "type": "string",
-                            "description": "Termo de busca no conteúdo da mensagem"
-                        },
-                        "start_date": {
-                            "type": "string",
-                            "format": "date",
-                            "description": "Data inicial (YYYY-MM-DD)"
-                        },
-                        "end_date": {
-                            "type": "string",
-                            "format": "date",
-                            "description": "Data final (YYYY-MM-DD)"
-                        },
-                        "limit": {
-                            "type": "integer",
-                            "description": "Quantidade máxima de resultados (padrão: 10)",
-                            "default": 10
-                        }
+                         "sender_name": {"type": "string"},
+                        "content": {"type": "string"},
+                        "start_date": {"type": "string", "format": "date"},
+                        "end_date": {"type": "string", "format": "date"},
+                        "limit": {"type": "integer", "default": 10}
                     }
                 }
             },
@@ -408,5 +390,3 @@ class ChatbotManager:
         for t, cols in required_columns.items():
             # Caso desejássemos verificar colunas, poderíamos fazer algo mais complexo
             logger.info(f"Verificando colunas esperadas em {t}: {cols}")
-
-
