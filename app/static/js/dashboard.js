@@ -1,9 +1,9 @@
-// static/js/dashboard.js
-
+// Função para voltar à página de seleção de chatbot
 function goBack() {
     window.location.href = "/select_chatbot";
 }
 
+// Função para fazer logout
 function logout() {
     axios.get('/logout')
         .then(() => {
@@ -14,6 +14,7 @@ function logout() {
         });
 }
 
+// Função para carregar os dados do dashboard
 function loadDashboardData() {
     axios.get('/get_dashboard_data')
         .then(response => {
@@ -65,5 +66,32 @@ function loadDashboardData() {
         });
 }
 
-// Carregar dados do dashboard ao iniciar a página
-window.onload = loadDashboardData;
+// Função para atualizar a análise de mensagens
+function updateAnalysis() {
+    document.getElementById('analysis-summary').innerHTML = 'Gerando análise...';
+    axios.get('/generate_analysis')
+        .then(response => {
+            let cleanedResponse = response.data.summary.replace(/```html|```/g, '');
+            document.getElementById('analysis-summary').innerHTML = cleanedResponse;
+        })
+        .catch(error => {
+            console.error('Erro ao gerar análise:', error);
+            document.getElementById('analysis-summary').innerHTML = 'Erro ao gerar análise. Tente novamente.';
+        });
+}
+
+// Função para configurar os event listeners
+function setupEventListeners() {
+    document.getElementById('back-btn').addEventListener('click', goBack);
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    document.getElementById('update-analysis-btn').addEventListener('click', updateAnalysis);
+}
+
+// Função de inicialização
+function init() {
+    loadDashboardData();
+    setupEventListeners();
+}
+
+// Inicializar quando o DOM estiver completamente carregado
+document.addEventListener('DOMContentLoaded', init);
