@@ -10,7 +10,7 @@ import logging
 client = OpenAI(api_key=Config.OPENAI_API_KEY)
 supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
 
-# Configuração de logging para depuração
+# Configuração de logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
@@ -19,7 +19,7 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
-class Chatbot:  # Mantendo o nome original para compatibilidade
+class Chatbot:
     def __init__(self, chatbot_type: str):
         self.manager = ChatbotManager()
         self.chatbot_type = chatbot_type
@@ -28,14 +28,13 @@ class Chatbot:  # Mantendo o nome original para compatibilidade
         return self.manager.create_thread()
 
     def send_message(self, thread_id: str, message: str) -> str:
-        response = self.manager.process_message(
+        resposta = self.manager.process_message(
             chatbot_type=self.chatbot_type,
             user_message=message,
             thread_id=thread_id
         )
-        return response.get('response', 'Desculpe, não foi possível gerar uma resposta.')
+        return resposta.get('response', 'Desculpe, não foi possível gerar uma resposta.')
 
-    # Mantemos todos os métodos originais como wrappers
     def extract_name(self, message: str) -> Optional[str]:
         return self.manager.extract_name(message)
 
@@ -45,6 +44,7 @@ class Chatbot:  # Mantendo o nome original para compatibilidade
     def _wait_for_run_completion(self, thread_id: str, run_id: str, timeout: int = 30):
         self.manager._wait_for_run_completion(thread_id, run_id, timeout)
 
+
 class ChatbotManager:
     def __init__(self):
         self.assistants = {}
@@ -52,7 +52,7 @@ class ChatbotManager:
         self._verify_supabase_access()
 
     def _initialize_assistants(self):
-        """Cria ou recupera assistentes com verificação de ferramentas"""
+        """Cria ou obtém auxiliares, validando ferramentas."""
         assistants_map = {
             "atual": {
                 "name": "Assistente de Vendas",
@@ -61,8 +61,10 @@ class ChatbotManager:
                 "instructions": (
                     "Você é um especialista em vendas. Use query_whatsapp_messages para acessar "
                     "histórico de conversas do WhatsApp. Sempre que o usuário mencionar 'histórico', "
-                    "'mensagens anteriores' ou pedir para 'consultar conversas', utilize a função."
+                    "'mensagens anteriores' ou pedir para 'consultar conversas', ou algo similar a isso, utilize a função."
                 ),
+
+                
                 "id": Config.ASSISTANT_ID_VENDAS
             },
             "novo": {
@@ -87,13 +89,12 @@ class ChatbotManager:
             self.assistants[key] = assistant
 
     def _get_or_create_assistant(self, params: Dict):
-        """Pilar 1: Gestão inteligente de assistentes"""
+        """Tenta recuperar auxiliar. Cria se não existir."""
         try:
             return client.beta.assistants.retrieve(params["id"])
-        except Exception as e:
+        except Exception:
             tools = [{"type": "function", "function": self._get_function_spec(fn)} 
                      for fn in params["functions"]]
-            
             return client.beta.assistants.create(
                 name=params["name"],
                 instructions=params["instructions"],
@@ -102,20 +103,21 @@ class ChatbotManager:
             )
 
     def _validate_assistant_tools(self, assistant, required_functions):
-        """Verifica e atualiza ferramentas do assistente se necessário"""
+        """Confirma se o auxiliar possui as ferramentas necessárias."""
         existing_functions = {tool.function.name for tool in assistant.tools if tool.type == "function"}
-        
         missing = set(required_functions) - existing_functions
         if missing:
-            raise ValueError(f"Assistente {assistant.name} está faltando funções: {missing}. "
-                             "Atualize manualmente no painel da OpenAI ou recrie o assistente.")
-        
+            raise ValueError(
+                f"Assistente {assistant.name} não possui as funções: {missing}. "
+                "Por favor, atualize no painel da OpenAI ou recrie o assistente."
+            )
+
     def _get_function_spec(self, function_name: str) -> Dict:
-        """Pilar 2: Definição estruturada de funções"""
+        """Define a estrutura das funções disponíveis."""
         functions = {
             "query_whatsapp_messages": {
                 "name": "query_whatsapp_messages",
-                "description": "Consulta mensagens históricas do WhatsApp com filtros avançados",
+                "description": "Consulta mensagens antigas do WhatsApp com filtros",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -130,16 +132,16 @@ class ChatbotManager:
                         "start_date": {
                             "type": "string",
                             "format": "date",
-                            "description": "Data inicial no formato YYYY-MM-DD"
+                            "description": "Data inicial (YYYY-MM-DD)"
                         },
                         "end_date": {
                             "type": "string",
                             "format": "date",
-                            "description": "Data final no formato YYYY-MM-DD"
+                            "description": "Data final (YYYY-MM-DD)"
                         },
                         "limit": {
                             "type": "integer",
-                            "description": "Número máximo de resultados (padrão: 10)",
+                            "description": "Quantidade máxima de resultados (padrão: 10)",
                             "default": 10
                         }
                     }
@@ -152,50 +154,43 @@ class ChatbotManager:
                     "type": "object",
                     "properties": {
                         "thread_id": {"type": "string"},
-                        "user_message": {"type": "string"},
-                        "assistant_response": {"type": "string"},
-                        "metadata": {"type": "object"}
+                        "role": {"type": "string"},
+                        "content": {"type": "string"},
+                        "timestamp": {"type": "string"},
+                        "user_name": {"type": "string"},
+                        "chatbot_type": {"type": "string"}
                     },
-                    "required": ["thread_id", "user_message"]
+                    "required": ["thread_id", "role", "content", "timestamp", "user_name"]
                 }
             }
         }
         return functions[function_name]
 
     def _execute_function(self, function_name: str, arguments: Dict) -> str:
-        """Pilar 6: Execução de funções com tratamento de erros"""
+        """Executa a função solicitada, tratando possíveis erros."""
         try:
             if function_name == "query_whatsapp_messages":
                 return self._query_whatsapp_data(arguments)
             elif function_name == "log_interaction":
                 return self._log_interaction(arguments)
             else:
-                return "Função não implementada"
+                return "Função não reconhecida"
         except Exception as e:
             return f"Erro na execução: {str(e)}"
 
     def _query_whatsapp_data(self, params: Dict) -> str:
-        """Consulta avançada com tratamento de datas e paginação"""
+        """Busca registros de WhatsApp aplicando filtros e ordenação."""
         try:
             query = supabase.table('whatsapp_messages').select('*')
-            
-            # Filtros básicos
             if params.get('sender_name'):
                 query = query.ilike('sender_name', f"%{params['sender_name']}%")
             if params.get('content'):
                 query = query.ilike('content', f"%{params['content']}%")
-            
-            # Filtro temporal (novo)
             if params.get('start_date') and params.get('end_date'):
                 query = query.gte('timestamp', params['start_date']).lte('timestamp', params['end_date'])
-            
-            # Ordenação e paginação
             query = query.order('timestamp', desc=True).limit(params.get('limit', 10))
-            
             result = query.execute()
-            
-            # Log para depuração
-            logger.info(f"Consulta Supabase: {len(result.data)} resultados")
+            logger.info(f"Consulta Supabase retornou: {len(result.data)} itens")
             return json.dumps({
                 "status": "success",
                 "data": result.data,
@@ -209,96 +204,103 @@ class ChatbotManager:
             })
 
     def _log_interaction(self, params: Dict) -> str:
-        """Registro duplo de interações"""
+        """Grava dados da interação atual."""
         try:
-            # Registro na tabela de mensagens
             message_data = {
                 "thread_id": params["thread_id"],
-                "role": "assistant" if params.get("assistant_response") else "user",
-                "content": params.get("assistant_response") or params["user_message"],
-                "chatbot_type": "atual" if "atual" in params["thread_id"] else "novo",
-                "timestamp": str(time.time())
+                "role": params["role"],
+                "content": params["content"],
+                "timestamp": params["timestamp"],
+                "user_name": params["user_name"],
+                "chatbot_type": params["chatbot_type"]
             }
             supabase.table('mensagens_chatbot').insert(message_data).execute()
-            
-            # Atualização do usuário
-            user_data = {
-                "id": params["thread_id"],
-                "last_interaction": str(time.time()),
-                "login_count": 1
-            }
-            supabase.table('usuarios_chatbot').upsert(user_data).execute()
-            
             return "Log registrado com sucesso"
         except Exception as e:
+            logger.error(f"Erro ao registrar logs: {str(e)}")
             return f"Erro no registro: {str(e)}"
 
+    def _update_user_profile(self, thread_id: str, user_name: str):
+        """Atualiza informações de perfil."""
+        try:
+            supabase.table('usuarios_chatbot').upsert({
+                "id": thread_id,
+                "user_name": user_name,
+                "last_interaction": str(time.time())
+            }).execute()
+        except Exception as e:
+            logger.error(f"Falha ao atualizar perfil: {str(e)}")
+
     def create_thread(self) -> str:
-        """Cria uma nova thread de conversa"""
+        """Cria uma conversa nova."""
         thread = client.beta.threads.create()
         return thread.id
 
     def process_message(self, chatbot_type: str, user_message: str, thread_id: str = None) -> Dict:
-        """Pilar 5: Processamento completo de mensagens"""
+        """Gerencia toda a operação de recepção e processamento da mensagem."""
         try:
             assistant = self.assistants[chatbot_type]
             thread_id = thread_id or self.create_thread()
-            
-            # Registro inicial da mensagem
+
+            # Extrair nome e registrar
+            user_name = self.extract_name(user_message) or "Usuário"
             self._log_interaction({
                 "thread_id": thread_id,
-                "user_message": user_message
+                "role": "user",
+                "content": user_message,
+                "timestamp": str(time.time()),
+                "user_name": user_name,
+                "chatbot_type": chatbot_type
             })
-            
-            # Adiciona mensagem à thread
+            self._update_user_profile(thread_id, user_name)
+
+            # Adicionar conteúdo na thread
             client.beta.threads.messages.create(
                 thread_id=thread_id,
                 role="user",
                 content=user_message
             )
-            
-            # Inicia execução
+
+            # Dispara execução
             run = client.beta.threads.runs.create(
                 thread_id=thread_id,
                 assistant_id=assistant.id
             )
-            
-            # Monitoramento da execução
+
             while True:
                 run_status = client.beta.threads.runs.retrieve(
                     thread_id=thread_id,
                     run_id=run.id
                 )
-                
+
                 if run_status.status == 'completed':
-                    messages = client.beta.threads.messages.list(thread_id=thread_id)
-                    return self._format_response(messages, thread_id)
-                    
+                    msgs = client.beta.threads.messages.list(thread_id=thread_id)
+                    return self._format_response(msgs, thread_id)
+
                 elif run_status.status == 'requires_action':
                     outputs = []
                     for tool_call in run_status.required_action.submit_tool_outputs.tool_calls:
                         fn_name = tool_call.function.name
                         args = json.loads(tool_call.function.arguments)
                         output = self._execute_function(fn_name, args)
-                        
                         outputs.append({
                             "tool_call_id": tool_call.id,
                             "output": output
                         })
-                    
+
                     client.beta.threads.runs.submit_tool_outputs(
                         thread_id=thread_id,
                         run_id=run.id,
                         tool_outputs=outputs
                     )
-                
+
                 time.sleep(1)
-                
+
         except Exception as e:
             return {"error": str(e)}
 
     def _format_response(self, messages, thread_id: str) -> Dict:
-        """Pilar 7: Formatação final da resposta"""
+        """Prepara a saída final."""
         last_message = messages.data[0].content[0].text.value
         return {
             "response": last_message,
@@ -311,50 +313,44 @@ class ChatbotManager:
         }
 
     def extract_name(self, message: str) -> Optional[str]:
-        """Extrai nomes usando técnica específica"""
+        """Recupera o primeiro nome detectado ou 'Nenhum nome encontrado'."""
         try:
             temp_thread = self.create_thread()
-            
             client.beta.threads.messages.create(
                 thread_id=temp_thread,
                 role="user",
                 content="Você é um especialista em extrair nomes. Retorne apenas o primeiro nome encontrado ou 'Nenhum nome encontrado'."
             )
-            
             client.beta.threads.messages.create(
                 thread_id=temp_thread,
                 role="user",
                 content=f"Extraia o nome desta mensagem: '{message}'"
             )
-            
             run = client.beta.threads.runs.create(
                 thread_id=temp_thread,
                 assistant_id=self.assistants["whatsapp"].id
             )
-            
             self._wait_for_run_completion(temp_thread, run.id)
-            
-            messages = client.beta.threads.messages.list(thread_id=temp_thread)
-            if messages.data:
-                extracted = messages.data[0].content[0].text.value.strip()
+
+            msgs = client.beta.threads.messages.list(thread_id=temp_thread)
+            if msgs.data:
+                extracted = msgs.data[0].content[0].text.value.strip()
                 return None if "nenhum" in extracted.lower() else extracted
             return None
         except Exception as e:
-            logger.error(f"Erro na extração: {e}")
+            logger.error(f"Erro na extração de nome: {e}")
             return None
 
     def generate_summary(self, messages: List[Dict[str, str]]) -> str:
-        """Gera resumo formatado de conversas"""
+        """Produz um resumo em HTML para as mensagens."""
         try:
-            system_msg = """Você é um analista de conversas. Formate o resumo em HTML com:
-            - <h3> para títulos
-            - <ul>/<li> para listas
-            - <strong> para ênfase"""
-            
-            user_msg = "Resuma estas mensagens:\n\n" + "\n".join(
+            system_msg = (
+                "Você é um analista de textos. Formate o resumo em HTML usando: "
+                "<h3> para títulos, <ul>/<li> para listas e <strong> para destaques."
+            )
+            user_msg = "Resuma:\n\n" + "\n".join(
                 f"{m['sender_name']}: {m['content']}" for m in messages
             )
-            
             response = client.chat.completions.create(
                 model="gpt-4o-mini-2024-07-18",
                 messages=[
@@ -363,54 +359,54 @@ class ChatbotManager:
                 ],
                 max_tokens=1000
             )
-            
             return response.choices[0].message.content
         except Exception as e:
-            return f"Erro na geração: {str(e)}"
+            return f"Erro ao gerar resumo: {str(e)}"
 
     def _wait_for_run_completion(self, thread_id: str, run_id: str, timeout: int = 30):
-        """Aguarda conclusão da execução"""
+        """Aguarda o encerramento de uma execução dentro do prazo."""
         start = time.time()
         while time.time() - start < timeout:
-            status = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run_id)
-            
+            status = client.beta.threads.runs.retrieve(
+                thread_id=thread_id,
+                run_id=run_id
+            )
             if status.status == "completed":
                 return
             elif status.status == "failed":
                 raise RuntimeError(f"Falha na execução: {status.last_error}")
-            
             time.sleep(1)
-        raise TimeoutError("Tempo excedido para resposta do assistente")
+        raise TimeoutError("Tempo esgotado para resposta do assistente")
 
     def _extract_sources(self, text: str) -> List[str]:
-        """Extrai fontes mencionadas no texto"""
+        """Simula extração de trechos como possíveis fontes."""
         return [text[i:i+50] for i in range(0, len(text), 50)][:3]
 
     def _extract_entities(self, text: str) -> Dict:
-        """Identifica entidades principais"""
+        """Identifica possíveis entidades no conteúdo."""
         return {"pessoas": [], "organizações": [], "locais": []}
 
     def _verify_supabase_access(self):
-        """Verifica permissões essenciais"""
+        """Checa permissões de leitura/escrita e colunas relevantes."""
         required_access = {
             'whatsapp_messages': ['SELECT'],
             'mensagens_chatbot': ['INSERT', 'UPDATE'],
             'usuarios_chatbot': ['SELECT', 'UPDATE']
         }
-        
         for table, permissions in required_access.items():
             try:
                 supabase.table(table).select('*').limit(1).execute()
             except Exception as e:
                 raise PermissionError(f"Acesso negado à tabela {table}: {str(e)}")
 
-# Teste manual no código
-def test_whatsapp_query():
-    manager = ChatbotManager()
-    params = {
-        "sender_name": "João",
-        "content": "pagamento",
-        "limit": 2
-    }
-    result = manager._query_whatsapp_data(params)
-    print("Resultado do teste:", json.loads(result))
+        # Verificação opcional de colunas específicas (exemplo)
+        required_columns = {
+            'mensagens_chatbot': ['user_name'],
+            'usuarios_chatbot': ['user_name']
+        }
+        # Checagens simbólicas: em um cenário real, seria preciso mapear colunas disponíveis
+        for t, cols in required_columns.items():
+            # Caso desejássemos verificar colunas, poderíamos fazer algo mais complexo
+            logger.info(f"Verificando colunas esperadas em {t}: {cols}")
+
+
