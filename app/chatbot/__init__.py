@@ -17,3 +17,6 @@ class ChatbotFactory:
             return WhatsAppChatbot()
         else:
             raise ValueError(f"Tipo de chatbot desconhecido: {chatbot_type}")
+
+# Adicione esta linha para permitir importação direta de Chatbot
+from .base import BaseChatbot as Chatbot

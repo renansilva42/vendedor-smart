@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import sys
 
 load_dotenv()
 
@@ -26,3 +27,15 @@ class Config:
     print(f"DEBUG: SECRET_KEY is set: {'Yes' if SECRET_KEY else 'No'}")
     print(f"DEBUG: SQLALCHEMY_DATABASE_URI = {SQLALCHEMY_DATABASE_URI}")
     print(f"DEBUG: ASSISTANT_ID_WHATSAPP = {ASSISTANT_ID_WHATSAPP}")
+
+# Validar variáveis críticas
+    @classmethod
+    def validate_config(cls):
+        missing_vars = []
+        for var in ['SUPABASE_URL', 'SUPABASE_KEY', 'OPENAI_API_KEY']:
+            if not getattr(cls, var):
+                missing_vars.append(var)
+        
+        if missing_vars:
+            print(f"ERRO: As seguintes variáveis de ambiente são obrigatórias: {', '.join(missing_vars)}")
+            sys.exit(1)

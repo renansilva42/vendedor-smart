@@ -1,6 +1,6 @@
 import logging
 from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for
-from app.chatbot import Chatbot
+from app.chatbot import Chatbot, ChatbotFactory
 from app.models import User, Message, Auth
 import uuid
 from functools import wraps

@@ -5,6 +5,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import logging
 import os
+import atexit
 
 
 # Configuração de logging
@@ -49,3 +50,6 @@ scheduler.start()
 
 if __name__ == '__main__':
     app.run(debug=True)
+    
+# Registrar função para encerrar o scheduler quando a aplicação for encerrada
+atexit.register(lambda: scheduler.shutdown())

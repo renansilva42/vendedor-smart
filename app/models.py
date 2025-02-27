@@ -4,6 +4,11 @@ import datetime
 import pytz
 import uuid
 from typing import Optional, Dict, List
+import logging
+
+# Configuração do logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Configuração do fuso horário
 TIMEZONE = pytz.timezone('America/Belem')
@@ -81,6 +86,10 @@ class User:
         Obtém um usuário pelo email ou cria um novo se não existir.
         Incrementa o contador de login.
         """
+        if not email:
+            logger.warning("Tentativa de obter usuário com email vazio")
+            return None
+            
         try:
             response = supabase.table('usuarios_chatbot').select('*').eq('email', email).execute()
             if response.data:
@@ -92,8 +101,8 @@ class User:
                 user_id = str(uuid.uuid4())
                 return User.create(user_id, name="Usuário Anônimo", email=email, login_count=1)
         except Exception as e:
-            print(f"Erro ao obter ou criar usuário por email: {e}")
-            raise
+            logger.error(f"Erro ao obter ou criar usuário por email: {e}")
+            return {"error": str(e)}
 
 
     @staticmethod
