@@ -50,6 +50,7 @@ class ChatbotManager:
     def __init__(self):
         self.assistants = {}
         self._initialize_assistants()
+        self._verify_assistants()  # Nova função para verificar assistentes
         self._verify_supabase_access()
 
     def _initialize_assistants(self):
@@ -58,27 +59,25 @@ class ChatbotManager:
             "atual": {
                 "name": "Assistente de Vendas (Mentor)",
                 "functions": ["query_whatsapp_messages", "log_interaction"],
-                "model": "gpt-4o-mini-2024-07-18",
+                "model": "gpt-4o",  # Atualizado para um modelo mais estável
                 "instructions": (
                     "Você é um especialista em vendas. Use query_whatsapp_messages para acessar "
                     "histórico de conversas do WhatsApp. Sempre que o usuário mencionar 'histórico', "
                     "'mensagens anteriores' ou pedir para 'consultar conversas', ou algo similar a isso, utilize a função."
                 ),
-
-                
                 "id": Config.ASSISTANT_ID_VENDAS
             },
             "novo": {
                 "name": "Simulador de Vendas",
                 "functions": ["log_interaction"],
-                "model": "gpt-4o-mini-2024-07-18",
+                "model": "gpt-4o",  # Atualizado para um modelo mais estável
                 "instructions": "Você é um cliente interessado em comprar uma passagem aérea, com o objetivo de treinar um vendedor da companhia aérea em seu processo de vendas.",
                 "id": Config.ASSISTANT_ID_TREINAMENTO
             },
             "whatsapp": {
                 "name": "Assistente WhatsApp",
                 "functions": [],
-                "model": "gpt-4o-mini-2024-07-18",
+                "model": "gpt-4o",  # Atualizado para um modelo mais estável
                 "instructions": "Você é especialista em análise de conversas do WhatsApp.",
                 "id": Config.ASSISTANT_ID_WHATSAPP
             }
@@ -89,11 +88,27 @@ class ChatbotManager:
             self._validate_assistant_tools(assistant, params["functions"])
             self.assistants[key] = assistant
 
+    def _verify_assistants(self):
+        """Verifica se os assistentes estão funcionando corretamente."""
+        for key, assistant in self.assistants.items():
+            try:
+                # Tenta obter informações do assistente
+                assistant_info = client.beta.assistants.retrieve(assistant.id)
+                logger.info(f"Assistente {key} verificado: {assistant_info.name} (ID: {assistant_info.id})")
+            except Exception as e:
+                logger.error(f"Erro ao verificar assistente {key}: {str(e)}")
+                raise RuntimeError(f"Assistente {key} não está disponível: {str(e)}")
+        
+        logger.info("Todos os assistentes verificados com sucesso")
+
     def _get_or_create_assistant(self, params: Dict):
         """Tenta recuperar auxiliar. Cria se não existir."""
         try:
+            logger.info(f"Tentando recuperar assistente com ID: {params['id']}")
             return client.beta.assistants.retrieve(params["id"])
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Não foi possível recuperar o assistente: {str(e)}")
+            logger.info(f"Criando novo assistente: {params['name']}")
             tools = [{"type": "function", "function": self._get_function_spec(fn)} 
                      for fn in params["functions"]]
             return client.beta.assistants.create(
@@ -108,10 +123,24 @@ class ChatbotManager:
         existing_functions = {tool.function.name for tool in assistant.tools if tool.type == "function"}
         missing = set(required_functions) - existing_functions
         if missing:
-            raise ValueError(
-                f"Assistente {assistant.name} não possui as funções: {missing}. "
-                "Por favor, atualize no painel da OpenAI ou recrie o assistente."
-            )
+            logger.warning(f"Assistente {assistant.name} não possui as funções: {missing}")
+            logger.info("Atualizando assistente com as funções necessárias")
+            
+            # Atualizar o assistente com as ferramentas necessárias
+            tools = [{"type": "function", "function": self._get_function_spec(fn)} 
+                    for fn in required_functions]
+            
+            try:
+                client.beta.assistants.update(
+                    assistant_id=assistant.id,
+                    tools=tools
+                )
+                logger.info(f"Assistente {assistant.name} atualizado com sucesso")
+            except Exception as e:
+                raise ValueError(
+                    f"Erro ao atualizar assistente {assistant.name}: {str(e)}. "
+                    "Por favor, atualize no painel da OpenAI ou recrie o assistente."
+                )
 
     def _get_function_spec(self, function_name: str) -> Dict:
         """Define a estrutura das funções disponíveis."""
@@ -159,6 +188,7 @@ class ChatbotManager:
             else:
                 return "Função não reconhecida"
         except Exception as e:
+            logger.error(f"Erro na execução da função {function_name}: {str(e)}", exc_info=True)
             return f"Erro na execução: {str(e)}"
 
     def _query_whatsapp_data(self, params: Dict) -> str:
@@ -180,6 +210,7 @@ class ChatbotManager:
                 "query_params": params
             })
         except Exception as e:
+            logger.error(f"Erro na consulta ao Supabase: {str(e)}", exc_info=True)
             return json.dumps({
                 "status": "error",
                 "message": str(e),
@@ -210,19 +241,39 @@ class ChatbotManager:
             supabase.table('mensagens_chatbot').insert(message_data).execute()
             return "Log registrado com sucesso"
         except Exception as e:
-            logger.error(f"Erro ao registrar logs: {str(e)}")
+            logger.error(f"Erro ao registrar logs: {str(e)}", exc_info=True)
             return f"Erro no registro: {str(e)}"
     
+    def _update_user_profile(self, thread_id, user_name):
+        """Atualiza o perfil do usuário com base no thread_id."""
+        try:
+            # Implementação simplificada - pode ser expandida conforme necessário
+            logger.info(f"Atualizando perfil do usuário para thread {thread_id} com nome {user_name}")
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao atualizar perfil do usuário: {str(e)}")
+            return False
 
     def create_thread(self) -> str:
         """Cria uma conversa nova."""
-        thread = client.beta.threads.create()
-        return thread.id
+        try:
+            thread = client.beta.threads.create()
+            logger.info(f"Nova thread criada: {thread.id}")
+            return thread.id
+        except Exception as e:
+            logger.error(f"Erro ao criar thread: {str(e)}", exc_info=True)
+            raise RuntimeError(f"Não foi possível criar uma nova thread: {str(e)}")
 
     def process_message(self, chatbot_type: str, user_message: str, thread_id: str = None) -> Dict:
         """Gerencia toda a operação de recepção e processamento da mensagem."""
         try:
+            if chatbot_type not in self.assistants:
+                logger.error(f"Tipo de chatbot inválido: {chatbot_type}")
+                return {"response": f"Erro: tipo de chatbot '{chatbot_type}' não reconhecido", "thread_id": thread_id}
+                
             assistant = self.assistants[chatbot_type]
+            logger.info(f"Usando assistente: {assistant.id} para chatbot_type: {chatbot_type}")
+            
             thread_id = thread_id or self.create_thread()
 
             # Extrair nome e registrar
@@ -238,65 +289,120 @@ class ChatbotManager:
             self._update_user_profile(thread_id, user_name)
 
             # Adicionar conteúdo na thread
-            client.beta.threads.messages.create(
-                thread_id=thread_id,
-                role="user",
-                content=user_message
-            )
+            try:
+                client.beta.threads.messages.create(
+                    thread_id=thread_id,
+                    role="user",
+                    content=user_message
+                )
+                logger.info(f"Mensagem do usuário adicionada à thread {thread_id}")
+            except Exception as e:
+                logger.error(f"Erro ao adicionar mensagem à thread: {str(e)}", exc_info=True)
+                return {"response": f"Erro ao processar sua mensagem: {str(e)}", "thread_id": thread_id}
 
             # Dispara execução
-            run = client.beta.threads.runs.create(
-                thread_id=thread_id,
-                assistant_id=assistant.id
-            )
-
-            while True:
-                run_status = client.beta.threads.runs.retrieve(
+            try:
+                run = client.beta.threads.runs.create(
                     thread_id=thread_id,
-                    run_id=run.id
+                    assistant_id=assistant.id
                 )
+                logger.info(f"Run criado: {run.id}")
+            except Exception as e:
+                logger.error(f"Erro ao criar run: {str(e)}", exc_info=True)
+                return {"response": f"Erro ao iniciar processamento: {str(e)}", "thread_id": thread_id}
 
-                if run_status.status == 'completed':
-                    msgs = client.beta.threads.messages.list(thread_id=thread_id)
-                    return self._format_response(msgs, thread_id)
-
-                elif run_status.status == 'requires_action':
-                    outputs = []
-                    for tool_call in run_status.required_action.submit_tool_outputs.tool_calls:
-                        fn_name = tool_call.function.name
-                        args = json.loads(tool_call.function.arguments)
-                        output = self._execute_function(fn_name, args)
-                        outputs.append({
-                            "tool_call_id": tool_call.id,
-                            "output": output
-                        })
-
-                    client.beta.threads.runs.submit_tool_outputs(
+            max_attempts = 30  # Limite de tentativas para evitar loops infinitos
+            attempts = 0
+            
+            while attempts < max_attempts:
+                attempts += 1
+                try:
+                    run_status = client.beta.threads.runs.retrieve(
                         thread_id=thread_id,
-                        run_id=run.id,
-                        tool_outputs=outputs
+                        run_id=run.id
                     )
+                    
+                    logger.info(f"Status do run {run.id}: {run_status.status}")
+                    
+                    if run_status.status == 'completed':
+                        msgs = client.beta.threads.messages.list(thread_id=thread_id)
+                        return self._format_response(msgs, thread_id)
+                    
+                    elif run_status.status == 'failed':
+                        error_msg = run_status.last_error.message if hasattr(run_status, 'last_error') else "Erro desconhecido"
+                        logger.error(f"Run falhou: {error_msg}")
+                        return {"response": f"Desculpe, ocorreu um erro: {error_msg}", "thread_id": thread_id}
+                    
+                    elif run_status.status == 'requires_action':
+                        outputs = []
+                        for tool_call in run_status.required_action.submit_tool_outputs.tool_calls:
+                            fn_name = tool_call.function.name
+                            args = json.loads(tool_call.function.arguments)
+                            output = self._execute_function(fn_name, args)
+                            outputs.append({
+                                "tool_call_id": tool_call.id,
+                                "output": output
+                            })
 
+                        client.beta.threads.runs.submit_tool_outputs(
+                            thread_id=thread_id,
+                            run_id=run.id,
+                            tool_outputs=outputs
+                        )
+                        logger.info(f"Outputs de ferramentas enviados para o run {run.id}")
+                    
+                    elif run_status.status in ['queued', 'in_progress']:
+                        # Continuar esperando
+                        pass
+                    
+                    else:
+                        logger.warning(f"Status desconhecido do run: {run_status.status}")
+                
+                except Exception as e:
+                    logger.error(f"Erro ao verificar status do run: {str(e)}", exc_info=True)
+                    return {"response": f"Erro ao processar sua mensagem: {str(e)}", "thread_id": thread_id}
+                
                 time.sleep(1)
+            
+            # Se chegou aqui, atingiu o limite de tentativas
+            logger.error(f"Tempo limite excedido para o run {run.id}")
+            return {"response": "Desculpe, o processamento da sua mensagem demorou muito tempo. Por favor, tente novamente.", "thread_id": thread_id}
 
         except Exception as e:
-            return {"error": str(e)}
+            logger.error(f"Erro no processamento da mensagem: {str(e)}", exc_info=True)
+            return {"response": f"Erro no processamento: {str(e)}", "thread_id": thread_id}
 
     def _format_response(self, messages, thread_id: str) -> Dict:
         """Prepara a saída final."""
-        last_message = messages.data[0].content[0].text.value
-        # Usar formato ISO 8601 para o timestamp
-        iso_timestamp = datetime.datetime.now().isoformat()
-        
-        return {
-            "response": last_message,
-            "thread_id": thread_id,
-            "timestamp": iso_timestamp,
-            "metadata": {
-                "sources": self._extract_sources(last_message),
-                "entities": self._extract_entities(last_message)
+        try:
+            if not messages.data:
+                logger.warning(f"Nenhuma mensagem encontrada para thread_id: {thread_id}")
+                return {
+                    "response": "Desculpe, não foi possível gerar uma resposta.",
+                    "thread_id": thread_id,
+                    "timestamp": datetime.datetime.now().isoformat()
+                }
+                
+            last_message = messages.data[0].content[0].text.value
+            # Usar formato ISO 8601 para o timestamp
+            iso_timestamp = datetime.datetime.now().isoformat()
+            
+            return {
+                "response": last_message,
+                "thread_id": thread_id,
+                "timestamp": iso_timestamp,
+                "metadata": {
+                    "sources": self._extract_sources(last_message),
+                    "entities": self._extract_entities(last_message)
+                }
             }
-        }
+        except Exception as e:
+            logger.error(f"Erro ao formatar resposta: {str(e)}", exc_info=True)
+            return {
+                "response": "Desculpe, ocorreu um erro ao processar a resposta.",
+                "thread_id": thread_id,
+                "timestamp": datetime.datetime.now().isoformat()
+            }
 
     def extract_name(self, message: str) -> Optional[str]:
         """Recupera o primeiro nome detectado ou 'Nenhum nome encontrado'."""
@@ -324,7 +430,7 @@ class ChatbotManager:
                 return None if "nenhum" in extracted.lower() else extracted
             return None
         except Exception as e:
-            logger.error(f"Erro na extração de nome: {e}")
+            logger.error(f"Erro na extração de nome: {e}", exc_info=True)
             return None
 
     def generate_summary(self, messages: List[Dict[str, str]]) -> str:
@@ -338,7 +444,7 @@ class ChatbotManager:
                 f"{m['sender_name']}: {m['content']}" for m in messages
             )
             response = client.chat.completions.create(
-                model="gpt-4o-mini-2024-07-18",
+                model="gpt-4o",  # Atualizado para um modelo mais estável
                 messages=[
                     {"role": "system", "content": system_msg},
                     {"role": "user", "content": user_msg}
@@ -347,21 +453,27 @@ class ChatbotManager:
             )
             return response.choices[0].message.content
         except Exception as e:
+            logger.error(f"Erro ao gerar resumo: {str(e)}", exc_info=True)
             return f"Erro ao gerar resumo: {str(e)}"
 
     def _wait_for_run_completion(self, thread_id: str, run_id: str, timeout: int = 30):
         """Aguarda o encerramento de uma execução dentro do prazo."""
         start = time.time()
         while time.time() - start < timeout:
-            status = client.beta.threads.runs.retrieve(
-                thread_id=thread_id,
-                run_id=run_id
-            )
-            if status.status == "completed":
-                return
-            elif status.status == "failed":
-                raise RuntimeError(f"Falha na execução: {status.last_error}")
-            time.sleep(1)
+            try:
+                status = client.beta.threads.runs.retrieve(
+                    thread_id=thread_id,
+                    run_id=run_id
+                )
+                if status.status == "completed":
+                    return
+                elif status.status == "failed":
+                    error_msg = status.last_error.message if hasattr(status, 'last_error') else "Erro desconhecido"
+                    raise RuntimeError(f"Falha na execução: {error_msg}")
+                time.sleep(1)
+            except Exception as e:
+                logger.error(f"Erro ao verificar status do run: {str(e)}", exc_info=True)
+                raise
         raise TimeoutError("Tempo esgotado para resposta do assistente")
 
     def _extract_sources(self, text: str) -> List[str]:
@@ -382,7 +494,9 @@ class ChatbotManager:
         for table, permissions in required_access.items():
             try:
                 supabase.table(table).select('*').limit(1).execute()
+                logger.info(f"Acesso verificado para tabela: {table}")
             except Exception as e:
+                logger.error(f"Acesso negado à tabela {table}: {str(e)}", exc_info=True)
                 raise PermissionError(f"Acesso negado à tabela {table}: {str(e)}")
 
         # Verificação opcional de colunas específicas (exemplo)
