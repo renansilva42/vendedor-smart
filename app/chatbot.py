@@ -6,6 +6,7 @@ import json
 from typing import Optional, List, Dict
 from supabase import create_client
 import logging
+import datetime
 
 client = OpenAI(api_key=Config.OPENAI_API_KEY)
 supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
@@ -188,11 +189,21 @@ class ChatbotManager:
     def _log_interaction(self, params: Dict) -> str:
         """Grava dados da interação atual."""
         try:
+            # Converter timestamp Unix para ISO 8601
+            timestamp = params.get("timestamp")
+            if isinstance(timestamp, str) and timestamp.replace('.', '').isdigit():
+                # Se for um timestamp Unix como string
+                timestamp_float = float(timestamp)
+                iso_timestamp = datetime.datetime.fromtimestamp(timestamp_float).isoformat()
+            else:
+                # Usar o timestamp atual se não for válido
+                iso_timestamp = datetime.datetime.now().isoformat()
+                
             message_data = {
                 "thread_id": params["thread_id"],
                 "role": params["role"],
                 "content": params["content"],
-                "timestamp": params["timestamp"],
+                "timestamp": iso_timestamp,  # Usar o formato ISO
                 "user_name": params["user_name"],
                 "chatbot_type": params["chatbot_type"]
             }
@@ -201,17 +212,7 @@ class ChatbotManager:
         except Exception as e:
             logger.error(f"Erro ao registrar logs: {str(e)}")
             return f"Erro no registro: {str(e)}"
-
-    def _update_user_profile(self, thread_id: str, user_name: str):
-        """Atualiza informações de perfil."""
-        try:
-            supabase.table('usuarios_chatbot').upsert({
-                "id": thread_id,
-                "user_name": user_name,
-                "last_interaction": str(time.time())
-            }).execute()
-        except Exception as e:
-            logger.error(f"Falha ao atualizar perfil: {str(e)}")
+    
 
     def create_thread(self) -> str:
         """Cria uma conversa nova."""
@@ -284,10 +285,13 @@ class ChatbotManager:
     def _format_response(self, messages, thread_id: str) -> Dict:
         """Prepara a saída final."""
         last_message = messages.data[0].content[0].text.value
+        # Usar formato ISO 8601 para o timestamp
+        iso_timestamp = datetime.datetime.now().isoformat()
+        
         return {
             "response": last_message,
             "thread_id": thread_id,
-            "timestamp": str(time.time()),
+            "timestamp": iso_timestamp,
             "metadata": {
                 "sources": self._extract_sources(last_message),
                 "entities": self._extract_entities(last_message)
