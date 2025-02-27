@@ -8,22 +8,52 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="select-chatbot-container">
-        <div class="header">
-            <h1>Selecione o Chatbot</h1>
-            <button id="logout-btn" onclick="logout()">Logout</button>
-        </div>
-        <div class="chatbot-options">
-            <a href="{{ url_for('main.chat', chatbot_type='atual') }}" class="chatbot-button">Especialista em Métodos de Venda
-            </a>
-            <br>
-            <a href="{{ url_for('main.chat', chatbot_type='novo') }}" class="chatbot-button">Treinamento de Vendas</a>
-            <br>
-            <a href="{{ url_for('main.dashboard') }}" class="chatbot-button">Dashboard</a>
+    <div class="container">
+        <div class="select-chatbot-container">
+            <div class="header-content">
+                <h1>Selecione o Chatbot</h1>
+                <div class="header-buttons">
+                    <button id="theme-toggle" class="theme-toggle" aria-label="Alternar tema claro/escuro">
+                        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                    </button>
+                    <button id="logout-btn" onclick="logout()" class="button button-secondary">Logout</button>
+                </div>
+            </div>
+            
+            <div class="chatbot-options">
+                <a href="{{ url_for('main.chat', chatbot_type='atual') }}" class="chatbot-button">
+                    <h2>Especialista em Métodos de Venda</h2>
+                    <p>Converse com um assistente especializado em técnicas de vendas e atendimento ao cliente.</p>
+                </a>
+                
+                <a href="{{ url_for('main.chat', chatbot_type='novo') }}" class="chatbot-button">
+                    <h2>Treinamento de Vendas</h2>
+                    <p>Pratique suas habilidades de vendas em um ambiente simulado com clientes virtuais.</p>
+                </a>
+                
+                <a href="{{ url_for('main.dashboard') }}" class="chatbot-button">
+                    <h2>Dashboard</h2>
+                    <p>Visualize seu desempenho e estatísticas de uso do sistema.</p>
+                </a>
+            </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <script>
         function logout() {
             axios.get('/logout')
@@ -32,6 +62,7 @@
                 })
                 .catch(error => {
                     console.error('Erro ao fazer logout:', error);
+                    alert('Erro ao fazer logout. Tente novamente.');
                 });
         }
     </script>

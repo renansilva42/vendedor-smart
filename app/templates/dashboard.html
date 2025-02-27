@@ -11,37 +11,61 @@
 <body>
     <div class="dashboard-container">
         <div class="header">
-            <h1>Dashboard - Meu Desempenho</h1>
-            <div class="header-buttons">
-                <button id="back-btn">Voltar</button>
-                <button id="logout-btn">Logout</button>
+            <div class="header-content container">
+                <h1>Dashboard - Meu Desempenho</h1>
+                <div class="header-buttons">
+                    <button id="theme-toggle" class="theme-toggle" aria-label="Alternar tema claro/escuro">
+                        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                    </button>
+                    <button id="back-btn" class="button button-secondary">Voltar</button>
+                    <button id="logout-btn" class="button button-secondary">Logout</button>
+                </div>
             </div>
         </div>
-        <div class="dashboard-content">
+        
+        <div class="dashboard-content container">
             <div class="dashboard-item">
                 <h2>Quantidade de Logins</h2>
                 <p id="login-count">Carregando...</p>
             </div>
+            
             <div class="dashboard-item">
                 <h2>Scores de Avaliação</h2>
                 <canvas id="scores-chart"></canvas>
             </div>
+            
             <div class="dashboard-item">
                 <h2>Feedback da IA</h2>
                 <p id="ia-feedback">Carregando...</p>
             </div>
+            
             <div class="dashboard-item">
                 <h2>Posicionamento</h2>
                 <p id="posicionamento">Carregando...</p>
             </div>
+            
             <div class="dashboard-item">
                 <h2>Análise de Mensagens</h2>
-                <button id="update-analysis-btn">Atualizar análise</button>
+                <button id="update-analysis-btn" class="button">Atualizar análise</button>
                 <div id="analysis-summary">Clique no botão acima para gerar a análise.</div>
             </div>
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

@@ -1,97 +1,130 @@
-// Função para voltar à página de seleção de chatbot
-function goBack() {
-    window.location.href = "/select_chatbot";
-}
-
-// Função para fazer logout
-function logout() {
-    axios.get('/logout')
-        .then(() => {
-            window.location.href = "/";
+// app/static/js/dashboard.js
+document.addEventListener('DOMContentLoaded', function() {
+    const backBtn = document.getElementById('back-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const updateAnalysisBtn = document.getElementById('update-analysis-btn');
+    const loginCountElement = document.getElementById('login-count');
+    const iaFeedbackElement = document.getElementById('ia-feedback');
+    const posicionamentoElement = document.getElementById('posicionamento');
+    const analysisSummaryElement = document.getElementById('analysis-summary');
+    
+    let scoresChart = null;
+    
+    // Event listeners
+    backBtn.addEventListener('click', function() {
+      window.location.href = '/select_chatbot';
+    });
+    
+    logoutBtn.addEventListener('click', function() {
+      window.location.href = '/logout';
+    });
+    
+    updateAnalysisBtn.addEventListener('click', function() {
+      updateAnalysisBtn.disabled = true;
+      updateAnalysisBtn.textContent = 'Gerando análise...';
+      analysisSummaryElement.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+      
+      fetch('/generate_analysis')
+        .then(response => response.json())
+        .then(data => {
+          if (data.summary) {
+            analysisSummaryElement.innerHTML = data.summary;
+          } else if (data.error) {
+            analysisSummaryElement.innerHTML = `<p class="error-message">Erro: ${data.error}</p>`;
+          }
         })
         .catch(error => {
-            console.error('Erro ao fazer logout:', error);
-        });
-}
-
-// Função para carregar os dados do dashboard
-function loadDashboardData() {
-    axios.get('/get_dashboard_data')
-        .then(response => {
-            const data = response.data;
-            
-            // Atualizar quantidade de logins
-            document.getElementById('login-count').textContent = data.login_count;
-
-            // Criar gráfico de scores
-            const ctx = document.getElementById('scores-chart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['Conversas com Lead', 'Conversas com IA', 'Avaliação da IA'],
-                    datasets: [{
-                        label: 'Scores',
-                        data: [data.lead_score, data.ia_conversation_score, data.ia_evaluation_score],
-                        backgroundColor: [
-                            'rgba(255, 99, 132, 0.2)',
-                            'rgba(54, 162, 235, 0.2)',
-                            'rgba(255, 206, 86, 0.2)'
-                        ],
-                        borderColor: [
-                            'rgba(255, 99, 132, 1)',
-                            'rgba(54, 162, 235, 1)',
-                            'rgba(255, 206, 86, 1)'
-                        ],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100
-                        }
-                    }
-                }
-            });
-
-            // Atualizar feedback da IA
-            document.getElementById('ia-feedback').textContent = data.ia_feedback;
-
-            // Atualizar posicionamento
-            document.getElementById('posicionamento').textContent = data.posicionamento;
+          console.error('Erro ao gerar análise:', error);
+          analysisSummaryElement.innerHTML = '<p class="error-message">Erro ao gerar análise. Tente novamente.</p>';
         })
-        .catch(error => {
-            console.error('Erro ao carregar dados do dashboard:', error);
+        .finally(() => {
+          updateAnalysisBtn.disabled = false;
+          updateAnalysisBtn.textContent = 'Atualizar análise';
         });
-}
-
-// Função para atualizar a análise de mensagens
-function updateAnalysis() {
-    document.getElementById('analysis-summary').innerHTML = 'Gerando análise...';
-    axios.get('/generate_analysis')
-        .then(response => {
-            let cleanedResponse = response.data.summary.replace(/```html|```/g, '');
-            document.getElementById('analysis-summary').innerHTML = cleanedResponse;
-        })
-        .catch(error => {
-            console.error('Erro ao gerar análise:', error);
-            document.getElementById('analysis-summary').innerHTML = 'Erro ao gerar análise. Tente novamente.';
-        });
-}
-
-// Função para configurar os event listeners
-function setupEventListeners() {
-    document.getElementById('back-btn').addEventListener('click', goBack);
-    document.getElementById('logout-btn').addEventListener('click', logout);
-    document.getElementById('update-analysis-btn').addEventListener('click', updateAnalysis);
-}
-
-// Função de inicialização
-function init() {
+    });
+    
+    // Carregar dados do dashboard
     loadDashboardData();
-    setupEventListeners();
-}
-
-// Inicializar quando o DOM estiver completamente carregado
-document.addEventListener('DOMContentLoaded', init);
+    
+    function loadDashboardData() {
+      fetch('/get_dashboard_data')
+        .then(response => response.json())
+        .then(data => {
+          if (data.error) {
+            console.error('Erro ao carregar dados:', data.error);
+            return;
+          }
+          
+          // Atualizar contagem de logins
+          loginCountElement.textContent = data.login_count || 0;
+          
+          // Atualizar feedback da IA
+          iaFeedbackElement.textContent = data.ia_feedback || 'Nenhum feedback disponível';
+          
+          // Atualizar posicionamento
+          posicionamentoElement.textContent = data.posicionamento || 'Nenhuma análise disponível';
+          
+          // Criar gráfico de scores
+          createScoresChart(
+            data.lead_score || 0,
+            data.ia_conversation_score || 0,
+            data.ia_evaluation_score || 0
+          );
+        })
+        .catch(error => {
+          console.error('Erro ao carregar dados do dashboard:', error);
+        });
+    }
+    
+    function createScoresChart(leadScore, conversationScore, evaluationScore) {
+      const ctx = document.getElementById('scores-chart').getContext('2d');
+      
+      // Destruir gráfico existente se houver
+      if (scoresChart) {
+        scoresChart.destroy();
+      }
+      
+      scoresChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['Pontuação de Lead', 'Pontuação de Conversa', 'Pontuação de Avaliação'],
+          datasets: [{
+            label: 'Scores',
+            data: [leadScore, conversationScore, evaluationScore],
+            backgroundColor: 'rgba(58, 110, 165, 0.2)',
+            borderColor: 'rgba(58, 110, 165, 1)',
+            borderWidth: 2,
+            pointBackgroundColor: 'rgba(58, 110, 165, 1)',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: 'rgba(58, 110, 165, 1)'
+          }]
+        },
+        options: {
+          scales: {
+            r: {
+              angleLines: {
+                display: true
+              },
+              suggestedMin: 0,
+              suggestedMax: 100
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.label}: ${context.raw}/100`;
+                }
+              }
+            }
+          },
+          responsive: true,
+          maintainAspectRatio: true
+        }
+      });
+    }
+  });
