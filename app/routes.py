@@ -5,6 +5,7 @@ from app.models import User, Message, Auth
 import uuid
 from functools import wraps
 from .whatsapp_handler import process_whatsapp_message
+from app.chatbot import ChatbotFactory
 
 # Configuração de logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -67,78 +68,60 @@ def select_chatbot():
 @bp.route('/chat/<chatbot_type>')
 @login_required
 def chat(chatbot_type):
-    session['chatbot_type'] = chatbot_type
+    if chatbot_type not in ['atual', 'novo']:
+        return redirect(url_for('main.select_chatbot'))
+    
     user_id = session.get('user_id')
-    logger.info(f"Iniciando chat para usuário {user_id} com chatbot tipo: {chatbot_type}")
-    return render_template('chat.html', chatbot_type=chatbot_type)
+    user_name = User.get_name(user_id)
+    
+    # Usar a fábrica para criar o chatbot
+    try:
+        chatbot = ChatbotFactory.create_chatbot(chatbot_type)
+        thread_id = User.get_thread_id(user_id, chatbot_type) or chatbot.create_thread()
+        User.update_thread_id(user_id, thread_id, chatbot_type)
+        
+        return render_template('chat.html', 
+                              chatbot_type=chatbot_type, 
+                              thread_id=thread_id,
+                              user_name=user_name)
+    except Exception as e:
+        logger.error(f"Erro ao inicializar chatbot: {str(e)}")
+        return redirect(url_for('main.select_chatbot'))
 
 @bp.route('/send_message', methods=['POST'])
 @login_required
 def send_message():
-    logger.info("Iniciando send_message")
     data = request.json
-    message = data['message']
-    chatbot_type = data.get('chatbot_type')
-    user_id = session.get('user_id')
-    logger.info(f"User ID: {user_id}, Chatbot Type: {chatbot_type}, Mensagem: '{message}'")
-
-    if not user_id or not chatbot_type:
-        logger.warning("Usuário não autenticado ou tipo de chatbot não especificado")
-        return jsonify({'error': 'Usuário não autenticado ou tipo de chatbot não especificado'}), 400
-
-    chatbot = Chatbot(chatbot_type)
-
-    thread_id = User.get_thread_id(user_id, chatbot_type)
-    if not thread_id:
-        thread_id = chatbot.create_thread()
-        User.update_thread_id(user_id, thread_id, chatbot_type)
-        logger.info(f"Nova thread criada: {thread_id} para usuário {user_id} e chatbot {chatbot_type}")
-    else:
-        User.update_last_interaction(user_id, chatbot_type)
-        logger.info(f"Thread existente atualizada: {thread_id} para usuário {user_id} e chatbot {chatbot_type}")
-
-    current_user_name = User.get_name(user_id)
-    logger.info(f"Nome atual do usuário: {current_user_name}")
-
-    if current_user_name in ["Usuário Anônimo", "Nenhum nome encontrado"]:
-        extracted_name = chatbot.extract_name(message)
-        logger.info(f"Nome extraído pelo chatbot: {extracted_name}")
-        
-        if extracted_name and extracted_name.lower() not in ["nenhum nome encontrado", current_user_name.lower()]:
-            try:
-                logger.info(f"Tentando atualizar nome do usuário {user_id} para: {extracted_name}")
-                updated_user = User.update_name(user_id, extracted_name)
-                if updated_user:
-                    logger.info(f"Nome do usuário atualizado para: {extracted_name}")
-                    current_user_name = extracted_name
-                    Message.update_user_name(thread_id, user_id, current_user_name)
-                else:
-                    logger.warning("Falha ao atualizar o nome do usuário no Supabase")
-            except Exception as e:
-                logger.error(f"Erro ao atualizar nome do usuário: {e}", exc_info=True)
-    else:
-        logger.info(f"Nome do usuário já definido: {current_user_name}")
-
-    user_message = Message.create(thread_id, 'user', message, user_id, chatbot_type, current_user_name)
-    if user_message:
-        logger.info(f"Mensagem do usuário criada: {user_message}")
-    else:
-        logger.warning("Falha ao criar mensagem do usuário")
-
-    response = chatbot.send_message(thread_id, message)
+    message = data.get('message', '')
+    thread_id = data.get('thread_id', '')
+    chatbot_type = data.get('chatbot_type', '')
     
-    if isinstance(response, dict):
-        assistant_response = response.get('response', 'Desculpe, não foi possível gerar uma resposta.')
-    else:
-        assistant_response = response
-
-    assistant_message = Message.create(thread_id, 'assistant', assistant_response, None, chatbot_type, 'Assistente IA')
-    if assistant_message:
-        logger.info(f"Mensagem do assistente criada: {assistant_message}")
-    else:
-        logger.warning("Falha ao criar mensagem do assistente")
-
-    return jsonify({'response': assistant_response, 'user_name': current_user_name})
+    if not message or not thread_id or not chatbot_type:
+        return jsonify({'error': 'Parâmetros incompletos'}), 400
+    
+    user_id = session.get('user_id')
+    user_name = User.get_name(user_id)
+    
+    try:
+        # Usar a fábrica para criar o chatbot
+        chatbot = ChatbotFactory.create_chatbot(chatbot_type)
+        
+        # Extrair nome se necessário
+        extracted_name = chatbot.extract_name(message)
+        if extracted_name and user_name == "Usuário Anônimo":
+            User.update_name(user_id, extracted_name)
+            user_name = extracted_name
+        
+        # Enviar mensagem
+        response = chatbot.send_message(thread_id, message, user_name)
+        
+        # Atualizar última interação
+        User.update_last_interaction(user_id, chatbot_type)
+        
+        return jsonify(response)
+    except Exception as e:
+        logger.error(f"Erro ao processar mensagem: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 @bp.route('/new_user', methods=['POST'])
 @login_required
