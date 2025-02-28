@@ -27,6 +27,21 @@ def login_required(f: Callable) -> Callable:
     return decorated_function
 
 # Rotas
+
+@main.before_request
+def check_session_expiry():
+    """Verifica se a sessão expirou."""
+    if 'user_id' in session and 'last_activity' in session:
+        # Verificar se passaram mais de 30 minutos desde a última atividade
+        last_activity = datetime.datetime.fromisoformat(session['last_activity'])
+        if (datetime.datetime.now() - last_activity).total_seconds() > 1800:  # 30 minutos
+            session.clear()
+            return redirect(url_for('main.index'))
+    
+    # Atualizar timestamp de última atividade
+    if 'user_id' in session:
+        session['last_activity'] = datetime.datetime.now().isoformat()
+
 @main.route('/')
 def index():
     """Rota principal que exibe a página de login ou redireciona para seleção de chatbot."""

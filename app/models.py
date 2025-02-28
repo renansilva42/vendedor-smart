@@ -40,12 +40,20 @@ except Exception as e:
 
 class Auth:
     @staticmethod
-    @lru_cache(maxsize=100)
+    
     def verify_credentials(email: str, password: str) -> bool:
-        """
-        Verifica se as credenciais do usuário são válidas.
-        Usa cache para reduzir consultas repetidas.
-        """
+        """Verifica credenciais com validação aprimorada."""
+        # Validar formato de email
+        if not email or '@' not in email or '.' not in email:
+            logger.warning(f"Tentativa de login com email inválido: {email}")
+            return False
+            
+        # Validar senha
+        if not password or len(password) < 6:
+            logger.warning(f"Tentativa de login com senha inválida para: {email}")
+            return False
+        
+        # Continuar com a verificação no banco de dados...
         try:
             response = supabase.table('usuarios_autorizados').select('*').eq('email', email).execute()
             if response.data:

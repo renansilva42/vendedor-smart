@@ -85,38 +85,30 @@ class BaseChatbot:
             logger.error(f"Erro ao criar thread: {str(e)}")
             raise RuntimeError(f"Não foi possível criar uma nova thread: {str(e)}")
     
-    def send_message(self, thread_id: str, message: str, user_name: str = "Usuário") -> Dict[str, Any]:
-        """Envia uma mensagem para o assistente e retorna a resposta."""
+    def send_message(self, thread_id: str, message: str) -> Dict[str, Any]:
+        """Envia mensagem para o thread com tratamento de erros aprimorado."""
         try:
-            # Registrar mensagem do usuário
-            self._log_interaction(thread_id, "user", message, user_name)
-            
-            # Adicionar mensagem à thread
-            client.beta.threads.messages.create(
+            return client.beta.threads.messages.create(
                 thread_id=thread_id,
                 role="user",
                 content=message
             )
-            
-            # Iniciar execução
-            run = client.beta.threads.runs.create(
-                thread_id=thread_id,
-                assistant_id=self.assistant_id
-            )
-            
-            # Processar a execução
-            response = self._process_run(thread_id, run.id)
-            
-            # Registrar resposta do assistente
-            if response.get("response"):
-                self._log_interaction(thread_id, "assistant", response["response"], self.name)
-                
-            return response
-            
         except Exception as e:
-            error_msg = f"Erro ao processar mensagem: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            return {"response": error_msg, "thread_id": thread_id}
+            logger.error(f"Erro ao enviar mensagem: {str(e)}")
+            # Tentar novamente com backoff exponencial
+            for attempt in range(3):
+                try:
+                    time.sleep(2 ** attempt)  # Backoff exponencial
+                    return client.beta.threads.messages.create(
+                        thread_id=thread_id,
+                        role="user",
+                        content=message
+                    )
+                except Exception as retry_e:
+                    logger.error(f"Tentativa {attempt+1} falhou: {str(retry_e)}")
+            
+            # Retornar resposta de fallback após falhas
+            return {"id": None, "content": "Erro de comunicação com o assistente."}
     
     def _process_run(self, thread_id: str, run_id: str) -> Dict[str, Any]:
         """Processa a execução da thread, incluindo chamadas de ferramentas."""
