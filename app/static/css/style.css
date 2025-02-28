@@ -706,3 +706,48 @@ select:focus {
     font-size: 16px; /* Evita zoom em dispositivos iOS */
   }
 }
+
+/* Estilos para a barra de carregamento */
+.loading-bar-container {
+  width: 100%;
+  background-color: var(--border-color);
+  border-radius: var(--border-radius-md);
+  margin: var(--spacing-md) 0;
+  overflow: hidden;
+}
+
+.loading-bar {
+  height: 20px;
+  background-color: var(--primary-color);
+  border-radius: var(--border-radius-md);
+  width: 0%;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.loading-bar-text {
+  position: absolute;
+  width: 100%;
+  text-align: center;
+  color: white;
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+  line-height: 20px;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Animação para a barra de carregamento */
+@keyframes loadingAnimation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.loading-bar.animated {
+  background: linear-gradient(90deg, 
+      var(--primary-color) 0%, 
+      var(--secondary-color) 50%, 
+      var(--primary-color) 100%);
+  background-size: 200% 100%;
+  animation: loadingAnimation 2s infinite;
+}
