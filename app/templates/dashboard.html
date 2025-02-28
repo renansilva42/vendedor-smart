@@ -6,79 +6,185 @@
     <title>Dashboard - Meu Desempenho</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div class="dashboard-container">
         <div class="header">
             <div class="header-content container">
                 <h1>Dashboard - Meu Desempenho</h1>
-                <div class="header-buttons">
-                    <button id="theme-toggle" class="theme-toggle" aria-label="Alternar tema claro/escuro">
-                        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                        </svg>
-                        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="5"></circle>
-                            <line x1="12" y1="1" x2="12" y2="3"></line>
-                            <line x1="12" y1="21" x2="12" y2="23"></line>
-                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                            <line x1="1" y1="12" x2="3" y2="12"></line>
-                            <line x1="21" y1="12" x2="23" y2="12"></line>
-                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                        </svg>
-                    </button>
-                    <button id="back-btn" class="button button-secondary">Voltar</button>
-                    <button id="logout-btn" class="button button-secondary">Logout</button>
+                <div class="header-controls">
+                    <div class="period-selector">
+                        <label for="period-select">Período:</label>
+                        <select id="period-select" class="select-control">
+                            <option value="month">Último Mês</option>
+                            <option value="quarter">Último Trimestre</option>
+                            <option value="year">Último Ano</option>
+                            <option value="all">Todo o Período</option>
+                        </select>
+                    </div>
+                    <div class="header-buttons">
+                        <button id="theme-toggle" class="theme-toggle" aria-label="Alternar tema claro/escuro">
+                            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                            </svg>
+                        </button>
+                        <button id="reset-layout-btn" class="button button-secondary">Resetar Layout</button>
+                        <button id="back-btn" class="button button-secondary">Voltar</button>
+                        <button id="logout-btn" class="button button-secondary">Logout</button>
+                    </div>
                 </div>
             </div>
         </div>
         
         <div class="dashboard-content container">
-            <div class="dashboard-item">
-                <h2>Quantidade de Logins</h2>
-                <div id="login-count">
-                    <div class="loading-bar-container">
-                        <div id="login-count-loading-bar" class="loading-bar animated">
-                            <span class="loading-bar-text">0%</span>
+            <div id="dashboard-grid" class="dashboard-grid">
+                <!-- Scores de Avaliação (Destacado) -->
+                <div class="dashboard-item" data-id="scores" data-priority="1">
+                    <div class="dashboard-item-header">
+                        <h2>Scores de Avaliação</h2>
+                        <div class="dashboard-item-controls">
+                            <button class="toggle-btn" aria-label="Minimizar/Expandir"><i class="fas fa-chevron-up"></i></button>
+                        </div>
+                    </div>
+                    <div class="dashboard-item-content">
+                        <div class="chart-container">
+                            <canvas id="scores-chart"></canvas>
+                        </div>
+                        <div class="chart-legend" id="scores-legend"></div>
+                        <div class="chart-comparison">
+                            <h4>Comparativo com período anterior:</h4>
+                            <div id="scores-comparison" class="comparison-data"></div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="dashboard-item">
-                <h2>Scores de Avaliação</h2>
-                <canvas id="scores-chart"></canvas>
-            </div>
-            
-            <div class="dashboard-item">
-                <h2>Feedback da IA</h2>
-                <div id="ia-feedback">
-                    <div class="loading-bar-container">
-                        <div id="ia-feedback-loading-bar" class="loading-bar animated">
-                            <span class="loading-bar-text">0%</span>
+                
+                <!-- Feedback da IA -->
+                <div class="dashboard-item" data-id="feedback" data-priority="2">
+                    <div class="dashboard-item-header">
+                        <h2>Feedback da IA</h2>
+                        <div class="dashboard-item-controls">
+                            <button class="toggle-btn" aria-label="Minimizar/Expandir"><i class="fas fa-chevron-up"></i></button>
+                        </div>
+                    </div>
+                    <div class="dashboard-item-content">
+                        <div id="ia-feedback">
+                            <div class="loading-bar-container">
+                                <div id="ia-feedback-loading-bar" class="loading-bar animated">
+                                    <span class="loading-bar-text">0%</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="dashboard-item">
-                <h2>Posicionamento</h2>
-                <div id="posicionamento">
-                    <div class="loading-bar-container">
-                        <div id="posicionamento-loading-bar" class="loading-bar animated">
-                            <span class="loading-bar-text">0%</span>
+                
+                <!-- Quantidade de Logins -->
+                <div class="dashboard-item" data-id="logins" data-priority="3">
+                    <div class="dashboard-item-header">
+                        <h2>Quantidade de Logins</h2>
+                        <div class="dashboard-item-controls">
+                            <button class="toggle-btn" aria-label="Minimizar/Expandir"><i class="fas fa-chevron-up"></i></button>
+                        </div>
+                    </div>
+                    <div class="dashboard-item-content">
+                        <div id="login-count" class="metric-display">
+                            <div class="loading-bar-container">
+                                <div id="login-count-loading-bar" class="loading-bar animated">
+                                    <span class="loading-bar-text">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="metric-trend">
+                            <span id="login-trend"></span>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div class="dashboard-item">
-                <h2>Análise de Mensagens</h2>
-                <button id="update-analysis-btn" class="button">Atualizar análise</button>
-                <div id="analysis-summary">Clique no botão acima para gerar a análise.</div>
+                
+                <!-- Posicionamento -->
+                <div class="dashboard-item" data-id="posicionamento" data-priority="4">
+                    <div class="dashboard-item-header">
+                        <h2>Posicionamento</h2>
+                        <div class="dashboard-item-controls">
+                            <button class="toggle-btn" aria-label="Minimizar/Expandir"><i class="fas fa-chevron-up"></i></button>
+                        </div>
+                    </div>
+                    <div class="dashboard-item-content">
+                        <div id="posicionamento">
+                            <div class="loading-bar-container">
+                                <div id="posicionamento-loading-bar" class="loading-bar animated">
+                                    <span class="loading-bar-text">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="posicionamento-guide" class="guide-container" style="display: none;">
+                            <h4>Próximos passos para análise completa:</h4>
+                            <ul class="steps-list">
+                                <li>Participe de mais <span id="required-conversations">5</span> conversas</li>
+                                <li>Diversifique os tópicos abordados</li>
+                                <li>Pratique técnicas de fechamento de vendas</li>
+                            </ul>
+                            <div class="progress-container">
+                                <div class="progress-label">Progresso para análise:</div>
+                                <div class="progress-bar">
+                                    <div id="analysis-progress" class="progress-fill" style="width: 0%;">0%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Análise de Mensagens -->
+                <div class="dashboard-item" data-id="analise" data-priority="5">
+                    <div class="dashboard-item-header">
+                        <h2>Análise de Mensagens</h2>
+                        <div class="dashboard-item-controls">
+                            <button class="toggle-btn" aria-label="Minimizar/Expandir"><i class="fas fa-chevron-up"></i></button>
+                        </div>
+                    </div>
+                    <div class="dashboard-item-content">
+                        <div class="analysis-controls">
+                            <button id="update-analysis-btn" class="button">Atualizar análise</button>
+                            <div class="analysis-filters">
+                                <select id="sentiment-filter" class="select-control">
+                                    <option value="all">Todos os sentimentos</option>
+                                    <option value="positive">Positivo</option>
+                                    <option value="neutral">Neutro</option>
+                                    <option value="negative">Negativo</option>
+                                </select>
+                                <select id="topic-filter" class="select-control">
+                                    <option value="all">Todos os tópicos</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="analysis-summary" class="analysis-content">
+                            <div class="chat-container">
+                                <div id="chat-messages" class="chat-messages"></div>
+                            </div>
+                            <div class="sentiment-analysis">
+                                <h4>Análise de Sentimento</h4>
+                                <div id="sentiment-chart" class="mini-chart"></div>
+                            </div>
+                            <div class="topics-analysis">
+                                <h4>Tópicos Recorrentes</h4>
+                                <div id="topics-list" class="topics-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
