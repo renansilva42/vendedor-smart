@@ -48,6 +48,23 @@ class Chatbot:
 
     def create_thread(self) -> str:
         thread = client.beta.threads.create()
+        
+        # Adicionar mensagem de boas-vindas que pede o nome
+        if self.chatbot_type != 'whatsapp':
+            client.beta.threads.messages.create(
+                thread_id=thread.id,
+                role="user",
+                content="Iniciar conversa"
+            )
+            
+            # Executar o run para obter a mensagem de boas-vindas
+            run = client.beta.threads.runs.create(
+                thread_id=thread.id,
+                assistant_id=self.assistant_id
+            )
+            
+            self._wait_for_run_completion(thread.id, run.id)  # Corrigido aqui
+        
         return thread.id
 
     def send_message(self, thread_id: str, message: str, user_name: str = "Usuário") -> Dict:

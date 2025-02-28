@@ -60,8 +60,15 @@ class BaseChatbot:
             raise RuntimeError(f"Não foi possível criar o assistente {self.name}: {str(e)}")
     
     def get_instructions(self) -> str:
-        """Retorna as instruções específicas para este chatbot."""
-        return "Você é um assistente de IA."
+        if self.chatbot_type == 'atual' or self.chatbot_type == 'novo':
+            return (
+                "Você é um assistente especializado em vendas. "
+                "Na primeira interação, sempre pergunte educadamente o nome do usuário. "
+                "Exemplo: 'Olá! Sou seu assistente de vendas. Como posso chamá-lo(a)?' "
+                "Depois de obter o nome, use-o nas interações seguintes para personalizar o atendimento."
+                # resto das instruções...
+            )
+    # outras instruções para outros tipos de chatbot...
     
     def get_tools(self) -> List[Dict[str, Any]]:
         """Retorna as ferramentas disponíveis para este chatbot."""

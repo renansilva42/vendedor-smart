@@ -306,8 +306,8 @@ def generate_analysis():
             logger.error("Falha ao criar chatbot do WhatsApp")
             return jsonify({'error': 'Falha ao criar chatbot'})
         
-        # Gerar resumo
-        summary = chatbot.generate_summary(messages)
+        # Usar o método wrapper que lida com o cache corretamente
+        summary = chatbot.summarize_messages(messages)
         
         return jsonify({'summary': summary})
     except Exception as e:
