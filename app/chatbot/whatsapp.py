@@ -1,8 +1,11 @@
-# app/chatbot/whatsapp.py
+# app/chatbot/whatsapp.py (refatorado)
 from typing import Dict, List, Any, Optional
 import logging
 from .base import BaseChatbot, client
 from config import Config
+import json
+import asyncio
+from functools import lru_cache
 
 logger = logging.getLogger("chatbot.whatsapp")
 
@@ -15,6 +18,8 @@ class WhatsAppChatbot(BaseChatbot):
             model="gpt-4o",
             assistant_id=Config.ASSISTANT_ID_WHATSAPP
         )
+        # Cache para armazenar nomes extraídos
+        self._name_cache = {}
     
     def get_instructions(self) -> str:
         return (
@@ -25,64 +30,54 @@ class WhatsAppChatbot(BaseChatbot):
         )
     
     def extract_name(self, message: str) -> Optional[str]:
-        """Extrai o nome do usuário usando o modelo de linguagem."""
+        """Extrai o nome do usuário usando o modelo de linguagem com cache."""
+        # Verificação rápida para mensagens muito curtas
+        if len(message.strip()) <= 2 or message.strip().lower() == "é":
+            return None
+            
+        # Verificar cache
+        if message in self._name_cache:
+            return self._name_cache[message]
+                
         try:
-            # Verificação inicial para mensagens muito curtas ou que são apenas "é"
-            if len(message.strip()) <= 2 or message.strip().lower() == "é":
+            # Usar uma abordagem mais eficiente com uma única chamada à API
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",  # Modelo mais leve e rápido para esta tarefa
+                messages=[
+                    {"role": "system", "content": "Extraia apenas o primeiro nome da pessoa desta mensagem. Responda apenas com o nome, sem pontuação ou frases adicionais. Se não houver nome, responda 'Nenhum'."},
+                    {"role": "user", "content": message}
+                ],
+                max_tokens=10  # Limitar tokens para resposta rápida
+            )
+            
+            extracted = response.choices[0].message.content.strip()
+            
+            # Validação do nome extraído
+            if extracted.lower() in ["nenhum", "none", "não há", "não encontrado"] or len(extracted) <= 2:
+                self._name_cache[message] = None
                 return None
                 
-            temp_thread = self.create_thread()
-            client.beta.threads.messages.create(
-                thread_id=temp_thread,
-                role="user",
-                content="Você é um especialista em extrair nomes. Retorne apenas o primeiro nome encontrado ou 'Nenhum nome encontrado'. Ignore palavras isoladas como 'é', 'sou', 'oi'."
-            )
-            client.beta.threads.messages.create(
-                thread_id=temp_thread,
-                role="user",
-                content=f"Extraia o nome desta mensagem: '{message}'"
-            )
-            run = client.beta.threads.runs.create(
-                thread_id=temp_thread,
-                assistant_id=self.assistant_id
-            )
+            # Verificar palavras comuns
+            common_words = ["oi", "olá", "bom", "boa", "dia", "tarde", "noite", "é", "eh", "sim", "não", "nao"]
+            if extracted.lower() in common_words:
+                self._name_cache[message] = None
+                return None
+                
+            # Armazenar no cache
+            self._name_cache[message] = extracted
+            return extracted
             
-            # Esperar pela conclusão
-            max_attempts = 30
-            attempts = 0
-            while attempts < max_attempts:
-                attempts += 1
-                run_status = client.beta.threads.runs.retrieve(
-                    thread_id=temp_thread,
-                    run_id=run.id
-                )
-                if run_status.status == 'completed':
-                    break
-                elif run_status.status == 'failed':
-                    logger.error("Falha na extração de nome")
-                    return None
-                import time
-                time.sleep(1)
-            
-            msgs = client.beta.threads.messages.list(thread_id=temp_thread)
-            if msgs.data:
-                extracted = msgs.data[0].content[0].text.value.strip()
-                # Validação adicional do nome extraído
-                if "nenhum" in extracted.lower() or len(extracted) <= 2:
-                    return None
-                # Verificar se o nome extraído não é apenas uma palavra comum
-                common_words = ["oi", "olá", "bom", "boa", "dia", "tarde", "noite", "é", "eh", "sim", "não", "nao"]
-                if extracted.lower() in common_words:
-                    return None
-                return extracted
-            return None
         except Exception as e:
             logger.error(f"Erro na extração de nome: {e}", exc_info=True)
             return None
     
-    def generate_summary(self, messages: List[Dict[str, str]]) -> str:
-        """Produz um resumo em HTML para as mensagens."""
+    @lru_cache(maxsize=20)
+    def generate_summary(self, messages_key: str) -> str:
+        """Produz um resumo em HTML para as mensagens com cache."""
         try:
+            # Desserializar mensagens do formato de chave
+            messages = json.loads(messages_key)
+            
             system_msg = (
                 "Você é um analista de textos. Formate o resumo em HTML usando: "
                 "<h3> para títulos, <ul>/<li> para listas e <strong> para destaques."
@@ -102,3 +97,13 @@ class WhatsAppChatbot(BaseChatbot):
         except Exception as e:
             logger.error(f"Erro ao gerar resumo: {str(e)}", exc_info=True)
             return f"<h3>Erro ao gerar resumo</h3><p>{str(e)}</p>"
+            
+    # Método para uso com o cache
+    def summarize_messages(self, messages: List[Dict[str, str]]) -> str:
+        """Wrapper para usar o cache com generate_summary."""
+        # Converter lista para string JSON para usar como chave de cache
+        messages_key = json.dumps([
+            {"sender_name": m["sender_name"], "content": m["content"]} 
+            for m in messages
+        ])
+        return self.generate_summary(messages_key)

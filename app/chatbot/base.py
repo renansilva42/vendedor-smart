@@ -1,12 +1,13 @@
-# app/chatbot/base.py
+# app/chatbot/base.py (refatorado)
 from openai import OpenAI
 from config import Config
 import time
 import json
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union, Callable
 from supabase import create_client
 import logging
 import datetime
+from functools import lru_cache
 
 client = OpenAI(api_key=Config.OPENAI_API_KEY)
 supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
@@ -30,7 +31,7 @@ class BaseChatbot:
         self.assistant_id = assistant_id
         self._initialize_assistant()
         
-    def _initialize_assistant(self):
+    def _initialize_assistant(self) -> None:
         """Inicializa ou recupera o assistente da OpenAI."""
         if not self.assistant_id:
             logger.warning(f"Nenhum ID de assistente fornecido para {self.name}. Criando novo.")
@@ -43,7 +44,7 @@ class BaseChatbot:
                 logger.error(f"Erro ao recuperar assistente {self.name}: {str(e)}")
                 self._create_assistant()
     
-    def _create_assistant(self):
+    def _create_assistant(self) -> None:
         """Cria um novo assistente com as configurações padrão."""
         try:
             self.assistant = client.beta.assistants.create(
@@ -66,8 +67,9 @@ class BaseChatbot:
         """Retorna as ferramentas disponíveis para este chatbot."""
         return []
     
+    @lru_cache(maxsize=100)
     def create_thread(self) -> str:
-        """Cria uma nova thread de conversa."""
+        """Cria uma nova thread de conversa com cache para evitar duplicações."""
         try:
             thread = client.beta.threads.create()
             logger.info(f"Nova thread criada: {thread.id}")
@@ -134,22 +136,7 @@ class BaseChatbot:
                     return {"response": f"Desculpe, ocorreu um erro: {error_msg}", "thread_id": thread_id}
                 
                 elif run_status.status == 'requires_action':
-                    outputs = []
-                    for tool_call in run_status.required_action.submit_tool_outputs.tool_calls:
-                        fn_name = tool_call.function.name
-                        args = json.loads(tool_call.function.arguments)
-                        output = self._execute_function(fn_name, args, thread_id)
-                        outputs.append({
-                            "tool_call_id": tool_call.id,
-                            "output": output
-                        })
-
-                    client.beta.threads.runs.submit_tool_outputs(
-                        thread_id=thread_id,
-                        run_id=run_id,
-                        tool_outputs=outputs
-                    )
-                    logger.info(f"Outputs de ferramentas enviados para o run {run_id}")
+                    self._handle_required_actions(thread_id, run_id, run_status)
                 
                 elif run_status.status in ['queued', 'in_progress']:
                     # Continuar esperando
@@ -167,6 +154,25 @@ class BaseChatbot:
         # Se chegou aqui, atingiu o limite de tentativas
         logger.error(f"Tempo limite excedido para o run {run_id}")
         return {"response": "Desculpe, o processamento da sua mensagem demorou muito tempo. Por favor, tente novamente.", "thread_id": thread_id}
+    
+    def _handle_required_actions(self, thread_id: str, run_id: str, run_status: Any) -> None:
+        """Processa ações requeridas pelo assistente."""
+        outputs = []
+        for tool_call in run_status.required_action.submit_tool_outputs.tool_calls:
+            fn_name = tool_call.function.name
+            args = json.loads(tool_call.function.arguments)
+            output = self._execute_function(fn_name, args, thread_id)
+            outputs.append({
+                "tool_call_id": tool_call.id,
+                "output": output
+            })
+
+        client.beta.threads.runs.submit_tool_outputs(
+            thread_id=thread_id,
+            run_id=run_id,
+            tool_outputs=outputs
+        )
+        logger.info(f"Outputs de ferramentas enviados para o run {run_id}")
     
     def _execute_function(self, function_name: str, arguments: Dict, thread_id: str) -> str:
         """Executa a função solicitada pelo assistente."""
@@ -205,7 +211,7 @@ class BaseChatbot:
                 "timestamp": datetime.datetime.now().isoformat()
             }
     
-    def _log_interaction(self, thread_id: str, role: str, content: str, user_name: str):
+    def _log_interaction(self, thread_id: str, role: str, content: str, user_name: str) -> None:
         """Registra a interação no banco de dados."""
         try:
             message_data = {

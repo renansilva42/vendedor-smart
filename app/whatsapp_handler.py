@@ -1,89 +1,69 @@
+# app/whatsapp_handler.py (refatorado)
 import logging
-from supabase import create_client
+from app.models import supabase
+import datetime
+import json
+from typing import Dict, Any, Optional
 from config import Config
-from datetime import datetime, timezone
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-try:
-    supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
-    logger.info("Conexão com Supabase estabelecida com sucesso")
-except Exception as e:
-    logger.error(f"Erro ao conectar com Supabase: {e}", exc_info=True)
-
-def process_whatsapp_message(message_data):
-    logger.info("Iniciando processamento da mensagem do WhatsApp")
+def process_whatsapp_message(message_data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Processa uma mensagem recebida do WhatsApp e armazena no banco de dados.
+    
+    Args:
+        message_data: Dicionário contendo os dados da mensagem
+        
+    Returns:
+        Dicionário com o resultado do processamento
+    """
     try:
-        logger.debug(f"Dados da mensagem: {message_data}")
+        logger.info(f"Processando mensagem do WhatsApp: {message_data}")
         
-        # Extrair informações do remetente e destinatário
-        user_number = message_data.get('data', {}).get('key', {}).get('remoteJid', 'Desconhecido')
-        user_name = message_data.get('data', {}).get('pushName', 'Desconhecido')
+        # Validar dados da mensagem
+        if not message_data:
+            logger.warning("Dados de mensagem vazios")
+            return {"status": "error", "message": "Dados vazios"}
         
-        webhook_instance = message_data.get('instance', 'Desconhecido')
-        webhook_number = message_data.get('sender', 'Desconhecido')  # Assumindo que 'sender' contém o número do webhook
+        # Extrair informações relevantes
+        sender = message_data.get('sender', 'Desconhecido')
+        content = message_data.get('content', '')
+        timestamp = message_data.get('timestamp', datetime.datetime.now().isoformat())
         
-        is_from_webhook = message_data.get('data', {}).get('key', {}).get('fromMe', False)
-
-        # Determinar sender e receiver baseado em quem enviou a mensagem
-        if is_from_webhook:
-            sender_name = webhook_instance
-            sender_number = webhook_number
-            receiver_name = user_name
-            receiver_number = user_number
-        else:
-            sender_name = user_name
-            sender_number = user_number
-            receiver_name = webhook_instance
-            receiver_number = webhook_number
-
-        message_content = message_data.get('data', {}).get('message', {}).get('conversation', '')
+        # Validar conteúdo
+        if not content or not isinstance(content, str):
+            logger.warning(f"Conteúdo de mensagem inválido: {content}")
+            return {"status": "error", "message": "Conteúdo inválido"}
         
-        timestamp = message_data.get('date_time')
-        try:
-            if timestamp:
-                timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-            else:
-                raise ValueError("Timestamp não fornecido")
-        except (ValueError, AttributeError):
-            timestamp = datetime.now(timezone.utc)
+        # Limitar tamanho do conteúdo
+        if len(content) > 10000:
+            content = content[:10000] + "... (truncado)"
+            logger.warning("Conteúdo da mensagem truncado por exceder 10000 caracteres")
         
-        # Converter timestamp para string ISO 8601
-        timestamp_str = timestamp.isoformat()
-        
-        logger.info(f"Mensagem de {sender_name} ({sender_number}) para {receiver_name} ({receiver_number})")
-        logger.debug(f"Conteúdo da mensagem: {message_content}")
-        logger.debug(f"Timestamp: {timestamp_str}")
-
-        whatsapp_message = {
-            'sender_name': sender_name,
-            'sender_number': sender_number,
-            'content': message_content,
-            'receiver_name': receiver_name,
-            'receiver_number': receiver_number,
-            'timestamp': timestamp_str,
-            'raw_data': message_data,
-            'is_from_webhook': is_from_webhook
+        # Preparar dados para armazenamento
+        message_record = {
+            "sender_name": sender,
+            "content": content,
+            "timestamp": timestamp,
+            "processed_at": datetime.datetime.now().isoformat()
         }
-
-        logger.info("Tentando inserir mensagem no Supabase")
-        logger.debug(f"Dados a serem inseridos: {whatsapp_message}")
         
-        try:
-            result = supabase.table('whatsapp_messages').insert(whatsapp_message).execute()
-            logger.info(f"Resultado da inserção: {result.data}")
-            
-            if result.data:
-                logger.info(f"Mensagem do WhatsApp armazenada com sucesso. ID: {result.data[0]['id']}")
-                return {"status": "success", "message": "Mensagem armazenada com sucesso"}
-            else:
-                logger.error("Falha ao armazenar a mensagem do WhatsApp no Supabase")
-                return {"status": "error", "message": "Falha ao armazenar a mensagem"}
-        except Exception as e:
-            logger.error(f"Erro ao inserir no Supabase: {e}", exc_info=True)
-            return {"status": "error", "message": str(e)}
-
+        # Armazenar no banco de dados
+        result = supabase.table('whatsapp_messages').insert(message_record).execute()
+        
+        if not result.data:
+            logger.error("Falha ao inserir mensagem no banco de dados")
+            return {"status": "error", "message": "Falha ao armazenar mensagem"}
+        
+        logger.info(f"Mensagem do WhatsApp processada com sucesso: ID {result.data[0].get('id')}")
+        
+        return {
+            "status": "success",
+            "message": "Mensagem processada com sucesso",
+            "record_id": result.data[0].get('id')
+        }
+        
     except Exception as e:
-        logger.error(f"Erro ao processar mensagem do WhatsApp: {e}", exc_info=True)
-        return {"status": "error", "message": str(e)}
+        logger.error(f"Erro ao processar mensagem do WhatsApp: {str(e)}", exc_info=True)
+        return {"status": "error", "message": f"Erro interno: {str(e)}"}

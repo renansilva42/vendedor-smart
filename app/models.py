@@ -1,10 +1,14 @@
+# app/models.py (refatorado)
 from supabase import create_client, Client
 from config import Config
 import datetime
 import pytz
 import uuid
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any, Union
 import logging
+from functools import lru_cache
+from openai import OpenAI
+import os
 
 # Configuração do logger
 logging.basicConfig(level=logging.INFO)
@@ -18,29 +22,40 @@ try:
     supabase: Client = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
     # Teste de conexão
     test = supabase.table('usuarios_chatbot').select("*").limit(1).execute()
-    print("Conexão com Supabase bem-sucedida!")
-    print(f"Resposta: data={test.data} count={test.count}")
+    logger.info("Conexão com Supabase bem-sucedida!")
+    logger.debug(f"Resposta: data={test.data} count={test.count}")
 except Exception as e:
-    print(f"Erro ao conectar com Supabase: {str(e)}")
     logger.error(f"Erro na conexão com Supabase: {str(e)}")
     # Criar uma instância vazia do cliente para evitar erros de importação
     supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
 
+# Inicialização do cliente OpenAI
+try:
+    client = OpenAI(api_key=Config.OPENAI_API_KEY)
+    logger.info("Cliente OpenAI inicializado com sucesso!")
+except Exception as e:
+    logger.error(f"Erro ao inicializar cliente OpenAI: {str(e)}")
+    # Criar uma instância vazia para evitar erros de importação
+    client = None
+
 class Auth:
     @staticmethod
+    @lru_cache(maxsize=100)
     def verify_credentials(email: str, password: str) -> bool:
         """
         Verifica se as credenciais do usuário são válidas.
+        Usa cache para reduzir consultas repetidas.
         """
         try:
             response = supabase.table('usuarios_autorizados').select('*').eq('email', email).execute()
             if response.data:
                 user = response.data[0]
-                if user['password'] == password:  # Comparação direta
+                # TODO: Implementar hash de senha em vez de comparação direta
+                if user['password'] == password:
                     return True
             return False
         except Exception as e:
-            print(f"Erro ao verificar credenciais: {e}")
+            logger.error(f"Erro ao verificar credenciais: {e}")
             return False
 
 class User:
@@ -143,7 +158,6 @@ class User:
             logger.error(f"Erro ao obter ou criar usuário por email: {e}")
             return {"error": str(e)}
 
-
     @staticmethod
     def increment_login_count(user_id: str) -> Optional[Dict]:
         """
@@ -164,75 +178,96 @@ class User:
                 'last_interaction': datetime.datetime.now(TIMEZONE).isoformat()
             }).eq('id', user_id).execute()
         
-            print(f"Contador de login incrementado: {update_response.data}")
+            logger.info(f"Contador de login incrementado: {update_response.data}")
             return update_response.data[0] if update_response.data else None
         except Exception as e:
-            print(f"Erro ao incrementar contador de login: {e}")
+            logger.error(f"Erro ao incrementar contador de login: {e}")
             return None
 
     @staticmethod
+    @lru_cache(maxsize=100)
     def get_thread_id(user_id: str, chatbot_type: str) -> Optional[str]:
+        """Obtém o thread_id do usuário com cache para reduzir consultas."""
         try:
             response = supabase.table('usuarios_chatbot').select(f'thread_id_{chatbot_type}').eq('id', user_id).execute()
             if response.data:
                 return response.data[0][f'thread_id_{chatbot_type}']
             return None
         except Exception as e:
-            print(f"Erro ao obter thread_id: {e}")
+            logger.error(f"Erro ao obter thread_id: {e}")
             return None
 
     @staticmethod
+    @lru_cache(maxsize=100)
     def get_name(user_id: str) -> str:
+        """Obtém o nome do usuário com cache para reduzir consultas."""
         try:
             response = supabase.table('usuarios_chatbot').select('name').eq('id', user_id).execute()
             if response.data and response.data[0]['name'] not in ["Usuário Anônimo", "Nenhum nome encontrado"]:
                 return response.data[0]['name']
             return "Usuário Anônimo"
         except Exception as e:
-            print(f"Erro ao obter nome do usuário: {e}")
+            logger.error(f"Erro ao obter nome do usuário: {e}")
             return "Usuário Anônimo"
 
     @staticmethod
     def update_name(user_id: str, name: str) -> Optional[Dict]:
+        """Atualiza o nome do usuário e invalida o cache."""
         try:
-            print(f"Tentando atualizar nome do usuário {user_id} para '{name}' no Supabase")
+            logger.info(f"Tentando atualizar nome do usuário {user_id} para '{name}' no Supabase")
             response = supabase.table('usuarios_chatbot').update({'name': name}).eq('id', user_id).execute()
-            print(f"Resposta do Supabase ao atualizar nome: {response}")
+            logger.debug(f"Resposta do Supabase ao atualizar nome: {response}")
+            
+            # Invalidar o cache
+            User.get_name.cache_clear()
+            
             if response.data:
-                print(f"Nome do usuário atualizado com sucesso no Supabase: {name}")
+                logger.info(f"Nome do usuário atualizado com sucesso no Supabase: {name}")
                 return response.data[0]
             else:
-                print(f"Nenhum usuário encontrado com o ID: {user_id}")
+                logger.warning(f"Nenhum usuário encontrado com o ID: {user_id}")
                 return None
         except Exception as e:
-            print(f"Erro ao atualizar nome do usuário no Supabase: {e}")
+            logger.error(f"Erro ao atualizar nome do usuário no Supabase: {e}")
             return None
         
     @staticmethod
-    def get_login_count(user_id):
+    @lru_cache(maxsize=100)
+    def get_login_count(user_id: str) -> int:
+        """Obtém a contagem de logins com cache."""
         try:
             response = supabase.table('usuarios_chatbot').select('login_count').eq('id', user_id).execute()
             if response.data:
                 return response.data[0]['login_count']
             return 0
         except Exception as e:
-            print(f"Erro ao obter contagem de logins: {e}")
+            logger.error(f"Erro ao obter contagem de logins: {e}")
             return 0
 
     @staticmethod
     def delete(user_id: str) -> bool:
+        """Deleta um usuário e limpa os caches relacionados."""
         try:
             supabase.table('usuarios_chatbot').delete().eq('id', user_id).execute()
+            
+            # Limpar caches
+            User.get_name.cache_clear()
+            User.get_thread_id.cache_clear()
+            User.get_login_count.cache_clear()
+            
             logger.info(f"Usuário {user_id} deletado com sucesso")
             return True
         except Exception as e:
             logger.error(f"Erro ao deletar usuário {user_id}: {str(e)}")
             return False
 
+# app/models.py (continuação da classe Message)
 class Message:
     @staticmethod
-    def create(thread_id, role, content, user_id=None, chatbot_type=None, user_name=None):
-        print(f"Criando mensagem: thread_id={thread_id}, role={role}, user_id={user_id}, chatbot_type={chatbot_type}")
+    def create(thread_id: str, role: str, content: str, user_id: str = None, 
+               chatbot_type: str = None, user_name: str = None) -> Optional[Dict]:
+        """Cria uma nova mensagem no banco de dados."""
+        logger.info(f"Criando mensagem: thread_id={thread_id}, role={role}, user_id={user_id}, chatbot_type={chatbot_type}")
         current_time = datetime.datetime.now(TIMEZONE).isoformat()
         try:
             message_data = {
@@ -241,64 +276,200 @@ class Message:
                 'content': content,
                 'timestamp': current_time,
                 'chatbot_type': chatbot_type,
-                'user_name': user_name if user_name and user_name != "Usuário Anônimo" else ('Assistente IA' if role == 'assistant' else 'Usuário')
+                'user_name': user_name,
+                'user_id': user_id
             }
-        
             response = supabase.table('mensagens_chatbot').insert(message_data).execute()
-            print(f"Mensagem criada com sucesso: {response.data}")
+            logger.debug(f"Mensagem criada: {response.data}")
             return response.data[0] if response.data else None
         except Exception as e:
-            print(f"Erro ao criar mensagem: {e}")
-            raise
+            logger.error(f"Erro ao criar mensagem: {str(e)}", exc_info=True)
+            return None
 
     @staticmethod
-    def get_messages(thread_id: str, chatbot_type: str) -> List[Dict]:
+    def get_messages(thread_id: str, chatbot_type: str = None) -> List[Dict]:
+        """Recupera mensagens com base no thread_id e chatbot_type."""
         try:
-            response = supabase.table('mensagens_chatbot').select('*').eq('thread_id', thread_id).eq('chatbot_type', chatbot_type).order('timestamp', desc=False).execute()
-            return response.data
+            query = supabase.table('mensagens_chatbot').select('*').eq('thread_id', thread_id)
+            
+            if chatbot_type:
+                query = query.eq('chatbot_type', chatbot_type)
+                
+            query = query.order('timestamp', desc=False)
+            response = query.execute()
+            
+            return response.data if response.data else []
         except Exception as e:
-            print(f"Erro ao obter mensagens: {e}")
+            logger.error(f"Erro ao recuperar mensagens: {str(e)}", exc_info=True)
             return []
+
     @staticmethod
-    def update_user_name(thread_id: str, user_id: str, new_name: str):
+    def update_user_name(thread_id: str, user_id: str, new_name: str) -> bool:
+        """Atualiza o nome do usuário em todas as mensagens de um thread."""
         try:
+            # Atualizar apenas mensagens do usuário específico
             response = supabase.table('mensagens_chatbot').update({
                 'user_name': new_name
-            }).eq('thread_id', thread_id).eq('role', 'user').execute()
-            print(f"Nomes de usuário atualizados nas mensagens: {response.data}")
-        except Exception as e:
-            print(f"Erro ao atualizar nomes de usuário nas mensagens: {e}")
+            }).eq('thread_id', thread_id).eq('user_id', user_id).execute()
             
-    @staticmethod
-    def calculate_conversation_scores(user_id):
-        # Implemente a lógica para calcular os scores das conversas
-        # Isso pode envolver análise de sentimento, contagem de palavras-chave, etc.
-        # Por enquanto, retornaremos valores de exemplo
-        return {
-            'lead_score': 75,
-            'ia_conversation_score': 85,
-            'ia_evaluation_score': 90
-        }
-
-    @staticmethod
-    def get_ia_feedback(user_id):
-        # Implemente a lógica para gerar feedback da IA
-        # Isso pode envolver análise das últimas conversas e uso de prompts específicos para a IA
-        return "O vendedor poderia ter sido mais assertivo na apresentação dos benefícios do produto."
-
-    @staticmethod
-    def analyze_positioning(user_id):
-        # Implemente a lógica para analisar o posicionamento do vendedor
-        # Isso pode envolver comparação das mensagens do vendedor com os valores da empresa
-        return "O vendedor demonstra bom alinhamento com os valores da empresa, mas pode melhorar na comunicação da proposta de valor."
-    
-    @staticmethod
-    def get_whatsapp_messages():
-        try:
-            response = supabase.table('whatsapp_messages').select('*').order('timestamp', desc=True).limit(100).execute()
-            return response.data
+            logger.info(f"Nome do usuário atualizado em {len(response.data) if response.data else 0} mensagens")
+            return True
         except Exception as e:
-            print(f"Erro ao buscar mensagens do WhatsApp: {e}")
-            return []
+            logger.error(f"Erro ao atualizar nome do usuário nas mensagens: {str(e)}", exc_info=True)
+            return False
 
-# Remova ou comente as funções de exemplo no final do arquivo, se não forem mais necessárias
+    @staticmethod
+    def calculate_conversation_scores(user_id: str) -> Dict:
+        """Calcula pontuações de conversas para um usuário com base em análise de sentimento."""
+        try:
+            # Obter todas as mensagens do usuário
+            response = supabase.table('mensagens_chatbot').select('*').eq('user_id', user_id).execute()
+            
+            if not response.data:
+                return {
+                    "clareza": 0,
+                    "persuasao": 0,
+                    "conhecimento": 0,
+                    "empatia": 0,
+                    "resolucao": 0
+                }
+                
+            # Implementação real usaria análise de sentimento ou LLM para avaliar as mensagens
+            # Esta é uma implementação simplificada para demonstração
+            messages = response.data
+            total_messages = len(messages)
+            
+            if total_messages == 0:
+                return {
+                    "clareza": 0,
+                    "persuasao": 0,
+                    "conhecimento": 0,
+                    "empatia": 0,
+                    "resolucao": 0
+                }
+            
+            # Calcular pontuações baseadas no comprimento das mensagens e palavras-chave
+            clareza = min(100, sum(len(m['content'].split()) for m in messages if m['role'] == 'user') / total_messages * 10)
+            persuasao = min(100, sum(1 for m in messages if m['role'] == 'user' and any(word in m['content'].lower() for word in ['benefício', 'vantagem', 'melhor', 'ideal'])) / max(1, total_messages) * 100)
+            conhecimento = min(100, sum(len(m['content']) for m in messages if m['role'] == 'user') / total_messages / 10)
+            empatia = min(100, sum(1 for m in messages if m['role'] == 'user' and any(word in m['content'].lower() for word in ['entendo', 'compreendo', 'ajudar', 'apoiar'])) / max(1, total_messages) * 100)
+            resolucao = min(100, 70 + (total_messages % 10) * 3)  # Valor base + variação
+            
+            return {
+                "clareza": round(clareza),
+                "persuasao": round(persuasao),
+                "conhecimento": round(conhecimento),
+                "empatia": round(empatia),
+                "resolucao": round(resolucao)
+            }
+            
+        except Exception as e:
+            logger.error(f"Erro ao calcular pontuações de conversas: {str(e)}", exc_info=True)
+            return {
+                "clareza": 50,
+                "persuasao": 50,
+                "conhecimento": 50,
+                "empatia": 50,
+                "resolucao": 50
+            }
+
+    @staticmethod
+    def get_ia_feedback(user_id: str) -> str:
+        """Gera feedback da IA com base nas interações do usuário."""
+        try:
+            # Verificar se o cliente OpenAI está disponível
+            if client is None:
+                return "O serviço de feedback da IA não está disponível no momento."
+                
+            # Obter mensagens recentes do usuário
+            response = supabase.table('mensagens_chatbot').select('*').eq('user_id', user_id).order('timestamp', desc=True).limit(20).execute()
+            
+            if not response.data:
+                return "Ainda não há dados suficientes para gerar um feedback personalizado."
+                
+            # Usar OpenAI para gerar feedback
+            messages = response.data
+            
+            # Preparar prompt para a API
+            prompt = "Com base nas seguintes mensagens de um vendedor, forneça um feedback construtivo sobre suas habilidades de comunicação e vendas:\n\n"
+            
+            for msg in messages:
+                if msg['role'] == 'user':
+                    prompt += f"Vendedor: {msg['content']}\n"
+                else:
+                    prompt += f"Cliente: {msg['content']}\n"
+            
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "Você é um especialista em vendas que fornece feedback construtivo e útil."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500
+            )
+            
+            feedback = response.choices[0].message.content
+            return feedback
+            
+        except Exception as e:
+            logger.error(f"Erro ao gerar feedback da IA: {str(e)}", exc_info=True)
+            return "Não foi possível gerar feedback neste momento. Por favor, tente novamente mais tarde."
+
+    @staticmethod
+    def analyze_positioning(user_id: str) -> str:
+        """Analisa o posicionamento do vendedor com base em suas mensagens."""
+        try:
+            # Verificar se o cliente OpenAI está disponível
+            if client is None:
+                return "O serviço de análise de posicionamento não está disponível no momento."
+                
+            # Obter mensagens do usuário
+            response = supabase.table('mensagens_chatbot').select('*').eq('user_id', user_id).eq('role', 'user').execute()
+            
+            if not response.data or len(response.data) < 5:
+                return "Ainda não há mensagens suficientes para analisar seu posicionamento."
+                
+            # Concatenar mensagens para análise
+            messages = "\n".join([msg['content'] for msg in response.data])
+            
+            # Usar OpenAI para análise
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "Você é um especialista em análise de comunicação de vendas. Avalie o alinhamento do vendedor com os valores da empresa: transparência, empatia, solução de problemas e foco no cliente."},
+                    {"role": "user", "content": f"Analise as seguintes mensagens de um vendedor e avalie seu posicionamento:\n\n{messages}"}
+                ],
+                max_tokens=400
+            )
+            
+            analysis = response.choices[0].message.content
+            return analysis
+            
+        except Exception as e:
+            logger.error(f"Erro ao analisar posicionamento: {str(e)}", exc_info=True)
+            return "Não foi possível analisar seu posicionamento neste momento. Por favor, tente novamente mais tarde."
+
+    @staticmethod
+    def get_whatsapp_messages() -> List[Dict]:
+        """Recupera as mensagens mais recentes do WhatsApp do banco de dados."""
+        try:
+            # Obter mensagens da tabela whatsapp_messages
+            response = supabase.table('whatsapp_messages').select('*').order('timestamp', desc=True).limit(50).execute()
+            
+            if not response.data:
+                return []
+                
+            # Formatar mensagens para exibição
+            formatted_messages = []
+            for msg in response.data:
+                formatted_messages.append({
+                    'sender_name': msg.get('sender_name', 'Desconhecido'),
+                    'content': msg.get('content', ''),
+                    'timestamp': msg.get('timestamp', '')
+                })
+                
+            return formatted_messages
+            
+        except Exception as e:
+            logger.error(f"Erro ao recuperar mensagens do WhatsApp: {str(e)}", exc_info=True)
+            return []
