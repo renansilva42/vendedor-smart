@@ -10,6 +10,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let isProcessing = false;
     let userName = 'Usuário';
     
+    // Obter thread_id do elemento data
+    let threadId = document.getElementById('chat-container').dataset.threadId;
+    const chatbotType = document.getElementById('chat-container').dataset.chatbotType;
+    
     // Carregar histórico de chat
     loadChatHistory();
     
@@ -69,6 +73,9 @@ document.addEventListener('DOMContentLoaded', function() {
       
       isProcessing = true;
       
+      // Obter o thread_id atual do DOM
+      const currentThreadId = document.getElementById('chat-container').dataset.threadId;
+      
       // Adicionar mensagem do usuário à interface
       addUserMessage(message);
       userInput.value = '';
@@ -85,6 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         body: JSON.stringify({
           message: message,
+          thread_id: currentThreadId,
           chatbot_type: chatbotType
         }),
       })
@@ -93,8 +101,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Remover indicador de carregamento
         removeElement(loadingId);
         
+        if (data.error) {
+          addSystemMessage('Erro: ' + data.error);
+          return;
+        }
+        
         // Atualizar nome do usuário se necessário
-        if (data.user_name && data.user_name !== userName && data.user_name !== 'Usuário Anônimo') {
+        if (data.user_name && data.user_name !== userName) {
           userName = data.user_name;
           // Atualizar nome em mensagens anteriores
           document.querySelectorAll('.chat-message--user .chat-message__sender').forEach(el => {
@@ -221,22 +234,59 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function startNewConversation() {
+    // Mostrar indicador de carregamento
+    const loadingId = 'loading-new-user';
+    addLoadingMessage(loadingId);
+
     fetch('/new_user', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
     })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Erro na resposta do servidor');
+      }
+      return response.json();
+    })
     .then(data => {
-      if (data.success) {
+      removeElement(loadingId);
+      
+      if (data.success && data.thread_id) {
+        // Atualizar thread_id no DOM
+        document.getElementById('chat-container').dataset.threadId = data.thread_id;
+        threadId = data.thread_id;
+        
+        // Limpar chat e adicionar mensagem inicial
         chatContainer.innerHTML = '';
-        addSystemMessage('Nova conversa iniciada. Como posso ajudar?');
+        userName = 'Usuário Anônimo';
+        addSystemMessage('Olá! Por favor, me diga seu nome para começarmos nossa conversa.');
+        
+        // Reabilitar input e botão
+        userInput.disabled = false;
+        sendBtn.disabled = false;
+        
+        // Enviar mensagem automática para o backend
+        fetch('/send_message', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: "Olá! Sou seu assistente virtual. Por favor, me diga seu nome para que eu possa te atender melhor.",
+            thread_id: data.thread_id,
+            chatbot_type: chatbotType
+          }),
+        });
       } else {
-        console.error('Erro ao criar novo usuário:', data.error);
-        addSystemMessage('Erro ao iniciar nova conversa. Por favor, tente novamente.');
+        throw new Error(data.error || 'Erro desconhecido ao criar novo usuário');
       }
     })
     .catch(error => {
       console.error('Erro ao criar novo usuário:', error);
-      addSystemMessage('Erro ao iniciar nova conversa. Por favor, tente novamente.');
+      removeElement(loadingId);
+      addSystemMessage('Erro ao iniciar nova conversa: ' + error.message);
     });
   }
 });

@@ -18,7 +18,7 @@ try:
     print("Conexão com Supabase bem-sucedida!")
     print(f"Resposta: {response}")
 except Exception as e:
-    print(f"Erro ao conectar com Supabase: {e}", file=sys.stderr)
+    print(f"Erro ao conectar com Supabase: {str(e)}")
     sys.exit(1)
 
 def delete_whatsapp_messages():
@@ -49,7 +49,7 @@ scheduler.add_job(
 scheduler.start()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)
     
 # Registrar função para encerrar o scheduler quando a aplicação for encerrada
 atexit.register(lambda: scheduler.shutdown())

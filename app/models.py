@@ -14,7 +14,17 @@ logger = logging.getLogger(__name__)
 TIMEZONE = pytz.timezone('America/Belem')
 
 # Inicialização do cliente Supabase
-supabase: Client = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
+try:
+    supabase: Client = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
+    # Teste de conexão
+    test = supabase.table('usuarios_chatbot').select("*").limit(1).execute()
+    print("Conexão com Supabase bem-sucedida!")
+    print(f"Resposta: data={test.data} count={test.count}")
+except Exception as e:
+    print(f"Erro ao conectar com Supabase: {str(e)}")
+    logger.error(f"Erro na conexão com Supabase: {str(e)}")
+    # Criar uma instância vazia do cliente para evitar erros de importação
+    supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
 
 class Auth:
     @staticmethod
@@ -35,51 +45,80 @@ class Auth:
 
 class User:
     @staticmethod
-    def create(user_id, name=None, email=None):
-        print(f"Criando usuário: {user_id}, nome: {name}, email: {email}")
+    def create(user_id: str, name: str = None, email: str = None, login_count: int = 1) -> Optional[Dict]:
+        logger.info(f"Criando usuário: {user_id}, nome: {name}, email: {email}, login_count: {login_count}")
         current_time = datetime.datetime.now(TIMEZONE).isoformat()
         try:
             user_data = {
                 'id': user_id,
                 'name': name or "Usuário Anônimo",
                 'email': email,
-                'last_interaction': current_time
+                'last_interaction': current_time,
+                'login_count': login_count,
+                'thread_id_atual': None,
+                'thread_id_novo': None
             }
             response = supabase.table('usuarios_chatbot').insert(user_data).execute()
-            print(f"Usuário criado com sucesso: {response.data}")
-            return response.data[0] if response.data else None
+            if response.data:
+                logger.info(f"Usuário criado com sucesso: {response.data[0]}")
+                return response.data[0]
+            return None
         except Exception as e:
-            print(f"Erro ao criar usuário: {e}")
+            logger.error(f"Erro ao criar usuário: {str(e)}")
             return None
 
     @staticmethod
-    def update_thread_id(user_id, thread_id, chatbot_type):
-        print(f"Atualizando thread_id para usuário {user_id}: {thread_id}, tipo: {chatbot_type}")
-        current_time = datetime.datetime.now(TIMEZONE).isoformat()
+    def update_thread_id(user_id: str, thread_id: str, chatbot_type: str) -> bool:
         try:
+            field_name = f'thread_id_{chatbot_type}'
             update_data = {
-                'last_interaction': current_time,
-                f'thread_id_{chatbot_type}': thread_id
+                field_name: thread_id,
+                'last_interaction': datetime.datetime.now(TIMEZONE).isoformat()
             }
+            
+            logger.info(f"Atualizando {field_name} para usuário {user_id} com valor {thread_id}")
+            
             response = supabase.table('usuarios_chatbot').update(update_data).eq('id', user_id).execute()
-            print(f"Thread_id atualizado com sucesso: {response.data}")
+            
+            if not response.data:
+                logger.error(f"Nenhum dado retornado ao atualizar thread_id para usuário {user_id}")
+                return False
+                
+            logger.info(f"Thread_id atualizado com sucesso: {response.data}")
+            return True
+            
         except Exception as e:
-            print(f"Erro ao atualizar thread_id: {e}")
-            raise
+            logger.error(f"Erro ao atualizar thread_id: {str(e)}")
+            return False
 
     @staticmethod
-    def update_last_interaction(user_id, chatbot_type):
-        print(f"Atualizando última interação para usuário: {user_id}, tipo: {chatbot_type}")
+    def update_thread_id_atual(user_id: str, thread_id: str) -> bool:
+        return User.update_thread_id(user_id, thread_id, 'atual')
+
+    @staticmethod
+    def update_thread_id_novo(user_id: str, thread_id: str) -> bool:
+        return User.update_thread_id(user_id, thread_id, 'novo')
+
+    @staticmethod
+    def update_last_interaction(user_id: str, chatbot_type: str) -> bool:
+        logger.info(f"Atualizando última interação para usuário: {user_id}, tipo: {chatbot_type}")
         current_time = datetime.datetime.now(TIMEZONE).isoformat()
         try:
             response = supabase.table('usuarios_chatbot').update({
                 'last_interaction': current_time
             }).eq('id', user_id).execute()
-            print(f"Última interação atualizada com sucesso: {response.data}")
+            
+            if response.data:
+                logger.info(f"Última interação atualizada com sucesso: {response.data}")
+                return True
+            else:
+                logger.warning(f"Nenhum dado retornado ao atualizar última interação para usuário {user_id}")
+                return False
+                
         except Exception as e:
-            print(f"Erro ao atualizar última interação: {e}")
-            raise
-        
+            logger.error(f"Erro ao atualizar última interação: {str(e)}")
+            return False
+
     @staticmethod
     def get_or_create_by_email(email: str) -> Optional[Dict]:
         """
@@ -132,25 +171,6 @@ class User:
             return None
 
     @staticmethod
-    def create(user_id, name=None, email=None, login_count=1):
-        print(f"Criando usuário: {user_id}, nome: {name}, email: {email}, login_count: {login_count}")
-        current_time = datetime.datetime.now(TIMEZONE).isoformat()
-        try:
-            user_data = {
-                'id': user_id,
-                'name': name or "Usuário Anônimo",
-                'email': email,
-                'last_interaction': current_time,
-                'login_count': login_count
-            }
-            response = supabase.table('usuarios_chatbot').insert(user_data).execute()
-            print(f"Usuário criado com sucesso: {response.data}")
-            return response.data[0] if response.data else None
-        except Exception as e:
-            print(f"Erro ao criar usuário: {e}")
-            return None
-
-    @staticmethod
     def get_thread_id(user_id: str, chatbot_type: str) -> Optional[str]:
         try:
             response = supabase.table('usuarios_chatbot').select(f'thread_id_{chatbot_type}').eq('id', user_id).execute()
@@ -198,6 +218,16 @@ class User:
         except Exception as e:
             print(f"Erro ao obter contagem de logins: {e}")
             return 0
+
+    @staticmethod
+    def delete(user_id: str) -> bool:
+        try:
+            supabase.table('usuarios_chatbot').delete().eq('id', user_id).execute()
+            logger.info(f"Usuário {user_id} deletado com sucesso")
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao deletar usuário {user_id}: {str(e)}")
+            return False
 
 class Message:
     @staticmethod

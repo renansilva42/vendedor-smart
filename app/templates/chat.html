@@ -34,7 +34,7 @@
         </div>
     </div>
     
-    <div id="chat-container"></div>
+    <div id="chat-container" data-thread-id="{{ thread_id }}" data-chatbot-type="{{ chatbot_type }}"></div>
     
     <div class="input-container">
         <input type="text" id="user-input" placeholder="Digite sua mensagem...">
@@ -48,9 +48,11 @@
             <line x1="19" y1="8" x2="19" y2="14"></line>
             <line x1="22" y1="11" x2="16" y2="11"></line>
         </svg>
+        Novo Usuário
     </button>
 
     <script>
+        // Passar variáveis do Flask para o JavaScript
         const chatbotType = "{{ chatbot_type }}";
     </script>
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>

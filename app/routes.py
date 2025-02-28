@@ -8,10 +8,11 @@ from .whatsapp_handler import process_whatsapp_message
 from app.chatbot import ChatbotFactory
 
 # Configuração de logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-bp = Blueprint('main', __name__)
+# Criar o blueprint
+main = Blueprint('main', __name__)
 
 def login_required(f):
     @wraps(f)
@@ -21,13 +22,13 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@bp.route('/')
+@main.route('/')
 def index():
     if session.get('authenticated'):
         return redirect(url_for('main.select_chatbot'))
     return render_template('index.html')
 
-@bp.route('/login', methods=['POST'])
+@main.route('/login', methods=['POST'])
 def login():
     data = request.json
     email = data.get('email')
@@ -53,19 +54,19 @@ def login():
         logger.warning(f"Falha na autenticação para o email: {email}")
         return jsonify({'success': False, 'error': 'Credenciais inválidas'}), 401
 
-@bp.route('/logout')
+@main.route('/logout')
 def logout():
     user_id = session.get('user_id')
     logger.info(f"Usuário deslogado: {user_id}")
     session.clear()
     return redirect(url_for('main.index'))
 
-@bp.route('/select_chatbot')
+@main.route('/select_chatbot')
 @login_required
 def select_chatbot():
     return render_template('select_chatbot.html')
 
-@bp.route('/chat/<chatbot_type>')
+@main.route('/chat/<chatbot_type>')
 @login_required
 def chat(chatbot_type):
     if chatbot_type not in ['atual', 'novo']:
@@ -88,7 +89,7 @@ def chat(chatbot_type):
         logger.error(f"Erro ao inicializar chatbot: {str(e)}")
         return redirect(url_for('main.select_chatbot'))
 
-@bp.route('/send_message', methods=['POST'])
+@main.route('/send_message', methods=['POST'])
 @login_required
 def send_message():
     data = request.json
@@ -106,45 +107,96 @@ def send_message():
         # Usar a fábrica para criar o chatbot
         chatbot = ChatbotFactory.create_chatbot(chatbot_type)
         
-        # Extrair nome se necessário
+        # Tentar extrair nome da mensagem
         extracted_name = chatbot.extract_name(message)
         if extracted_name and user_name == "Usuário Anônimo":
-            User.update_name(user_id, extracted_name)
-            user_name = extracted_name
+            success = User.update_name(user_id, extracted_name)
+            if success:
+                user_name = extracted_name
+                # Atualizar nome nas mensagens anteriores
+                Message.update_user_name(thread_id, user_id, extracted_name)
+                logger.info(f"Nome do usuário atualizado para: {extracted_name}")
         
         # Enviar mensagem
         response = chatbot.send_message(thread_id, message, user_name)
         
-        # Atualizar última interação
-        User.update_last_interaction(user_id, chatbot_type)
+        # Tentar atualizar última interação
+        try:
+            User.update_last_interaction(user_id, chatbot_type)
+        except Exception as e:
+            logger.warning(f"Erro ao atualizar última interação, mas continuando: {str(e)}")
         
-        return jsonify(response)
+        # Retornar resposta com nome do usuário atualizado
+        return jsonify({
+            'response': response.get('response', ''),
+            'user_name': user_name,
+            'error': response.get('error')
+        })
+        
     except Exception as e:
-        logger.error(f"Erro ao processar mensagem: {str(e)}", exc_info=True)
+        logger.error(f"Erro ao processar mensagem: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/new_user', methods=['POST'])
+@main.route('/new_user', methods=['POST'])
 @login_required
 def new_user():
-    old_user_id = session.pop('user_id', None)
-    session.pop('user_name', None)
-    chatbot_type = session.pop('chatbot_type', None)
-    email = session.get('user_email')
-    logger.info(f"Iniciando nova conversa. Usuário anterior: {old_user_id}")
+    try:
+        # Obter informações da sessão
+        old_user_id = session.get('user_id')
+        email = session.get('user_email')
+        chatbot_type = session.get('chatbot_type', 'atual')
+        
+        logger.info(f"Iniciando criação de novo usuário. Usuário anterior: {old_user_id}, Email: {email}, Tipo: {chatbot_type}")
 
-    new_user_id = str(uuid.uuid4())
-    new_user = User.create(new_user_id, name="Usuário Anônimo", email=email)
-    if new_user:
-        session['user_id'] = new_user_id
-        session['chatbot_type'] = chatbot_type
-        logger.info(f"Novo user_id gerado e salvo: {new_user_id}, Chatbot Type: {chatbot_type}, Email: {email}")
-    else:
-        logger.error("Falha ao criar novo usuário")
-        return jsonify({'success': False, 'error': 'Falha ao criar novo usuário'}), 500
+        # Criar novo usuário
+        new_user_id = str(uuid.uuid4())
+        new_user = User.create(new_user_id, name="Usuário Anônimo", email=email)
+        
+        if not new_user:
+            raise Exception("Falha ao criar novo usuário no banco de dados")
 
-    return jsonify({'success': True})
+        # Criar nova thread usando a fábrica de chatbot
+        try:
+            chatbot = ChatbotFactory.create_chatbot(chatbot_type)
+            new_thread_id = chatbot.create_thread()
+            
+            if not new_thread_id:
+                raise Exception("Falha ao criar nova thread no chatbot")
+                
+            logger.info(f"Nova thread criada: {new_thread_id}")
+            
+            # Atualizar thread_id no usuário
+            success = User.update_thread_id(new_user_id, new_thread_id, chatbot_type)
+            if not success:
+                raise Exception("Falha ao atualizar thread_id no usuário")
+                
+            # Atualizar sessão
+            session['user_id'] = new_user_id
+            
+            logger.info(f"Novo usuário criado com sucesso. ID: {new_user_id}, Thread: {new_thread_id}")
+            
+            return jsonify({
+                'success': True,
+                'thread_id': new_thread_id,
+                'user_id': new_user_id,
+                'message': 'Novo usuário criado com sucesso'
+            })
+            
+        except Exception as e:
+            logger.error(f"Erro ao criar thread: {str(e)}")
+            # Limpar o usuário criado em caso de falha
+            User.delete(new_user_id)
+            raise Exception(f"Erro ao criar thread: {str(e)}")
 
-@bp.route('/get_chat_history')
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"Erro ao criar novo usuário: {error_msg}")
+        return jsonify({
+            'success': False,
+            'error': error_msg
+        }), 500
+
+@main.route('/get_chat_history')
 @login_required
 def get_chat_history():
     user_id = session.get('user_id')
@@ -162,12 +214,12 @@ def get_chat_history():
     logger.info(f"Histórico de chat obtido para thread_id: {thread_id}")
     return jsonify(messages)
 
-@bp.route('/dashboard')
+@main.route('/dashboard')
 @login_required
 def dashboard():
     return render_template('dashboard.html')
 
-@bp.route('/get_dashboard_data')
+@main.route('/get_dashboard_data')
 @login_required
 def get_dashboard_data():
     user_id = session.get('user_id')
@@ -192,7 +244,7 @@ def get_dashboard_data():
     logger.info(f"Dados do dashboard obtidos para user_id: {user_id}")
     return jsonify(data)
 
-@bp.route('/whatsapp-webhook', methods=['POST', 'GET'])
+@main.route('/whatsapp-webhook', methods=['POST', 'GET'])
 def whatsapp_webhook():
     logger.info("Webhook do WhatsApp acionado")
     logger.debug(f"Método da requisição: {request.method}")
@@ -239,7 +291,7 @@ def whatsapp_webhook():
         logger.warning(f"Método não permitido: {request.method}")
         return jsonify({"status": "error", "message": "Método não permitido"}), 405
 
-@bp.route('/generate_analysis')
+@main.route('/generate_analysis')
 @login_required
 def generate_analysis():
     logger.info("Iniciando geração de análise")
