@@ -53,18 +53,21 @@ class Chatbot:
     def send_message(self, thread_id: str, message: str, user_name: str = "Usuário") -> Dict:
         try:
             # Verificar se é uma mensagem de apresentação e extrair nome
-            extracted_name = self.extract_name(message)
-            if extracted_name:
-                user_name = extracted_name
-                # Atualizar o nome no Supabase
-                from app.models import User
-                user_id = None
-                # Tentar obter user_id da sessão Flask
-                from flask import session
-                if session and 'user_id' in session:
-                    user_id = session.get('user_id')
-                if user_id:
-                    User.update_name(user_id, user_name)
+            # Não extrair nome de mensagens muito curtas
+            if len(message.strip()) > 5:
+                extracted_name = self.extract_name(message)
+                if extracted_name and len(extracted_name) > 2:
+                    user_name = extracted_name
+                    # Atualizar o nome no Supabase
+                    from app.models import User
+                    user_id = None
+                    # Tentar obter user_id da sessão Flask
+                    from flask import session
+                    if session and 'user_id' in session:
+                        user_id = session.get('user_id')
+                    if user_id:
+                        User.update_name(user_id, user_name)
+                        logger.info(f"Nome do usuário atualizado para: {user_name}")
 
             # Adicionar mensagem à thread
             client.beta.threads.messages.create(
@@ -145,14 +148,25 @@ class Chatbot:
 
     def extract_name(self, message: str) -> Optional[str]:
         try:
+            # Verificação inicial para mensagens muito curtas
+            if len(message.strip()) <= 2:
+                return None
+                
+            # Lista de palavras comuns que não devem ser interpretadas como nomes
+            common_words = ["oi", "olá", "bom", "boa", "dia", "tarde", "noite", "é", "eh", "sim", "não", "nao", 
+                           "sou", "meu", "me", "ok", "tudo", "bem", "obrigado", "obrigada", "por", "favor"]
+            
+            # Se a mensagem for apenas uma palavra comum, não é um nome
+            if message.strip().lower() in common_words:
+                return None
+            
             # Usar expressões regulares para tentar encontrar padrões comuns de nome
             patterns = [
-                r"(?i)meu nome[^\w]*(é|eh)[^\w]*([a-zA-ZÀ-ÿ\s]+)",  # Adicionado \s para nomes compostos
-                r"(?i)me chamo[^\w]*([a-zA-ZÀ-ÿ\s]+)",
-                r"(?i)sou[^\w]*o[^\w]*([a-zA-ZÀ-ÿ\s]+)",
-                r"(?i)sou[^\w]*a[^\w]*([a-zA-ZÀ-ÿ\s]+)",
-                r"(?i)pode[^\w]*me[^\w]*chamar[^\w]*de[^\w]*([a-zA-ZÀ-ÿ\s]+)",
-                r"(?i)^([a-zA-ZÀ-ÿ\s]+)$"  # Tenta extrair se a mensagem for apenas um nome
+                r"(?i)meu nome[^\w]*(é|eh)[^\w]*([a-zA-ZÀ-ÿ\s]{3,})",  # Mínimo de 3 caracteres
+                r"(?i)me chamo[^\w]*([a-zA-ZÀ-ÿ\s]{3,})",
+                r"(?i)sou[^\w]*o[^\w]*([a-zA-ZÀ-ÿ\s]{3,})",
+                r"(?i)sou[^\w]*a[^\w]*([a-zA-ZÀ-ÿ\s]{3,})",
+                r"(?i)pode[^\w]*me[^\w]*chamar[^\w]*de[^\w]*([a-zA-ZÀ-ÿ\s]{3,})"
             ]
             
             for pattern in patterns:
@@ -161,37 +175,42 @@ class Chatbot:
                     # Pega o último grupo de captura (o nome)
                     name = match.group(match.lastindex).strip().capitalize()
                     # Verifica se é um nome válido (mais de 2 caracteres e não é uma palavra comum)
-                    if len(name) > 2 and not any(word.lower() in ["sou", "meu", "me", "eh", "é", "sim", "não", "nao"] for word in name.split()):
+                    if len(name) > 2 and not any(word.lower() in common_words for word in name.split()):
                         return name
             
             # Se não encontrou com regex, usa a OpenAI como fallback
-            thread = client.beta.threads.create()
-            client.beta.threads.messages.create(
-                thread_id=thread.id,
-                role="user",
-                content=f"Extraia apenas o primeiro nome desta mensagem (responda APENAS o nome, sem pontuação ou texto adicional). Se não houver nome, responda apenas 'não'. Mensagem: {message}"
-            )
-            
-            run = client.beta.threads.runs.create(
-                thread_id=thread.id,
-                assistant_id=self.assistant_id,
-                model="gpt-3.5-turbo-0125",
-                temperature=0.2  # Temperatura mais baixa para maior precisão
-            )
-            
-            self._wait_for_run_completion(thread.id, run.id, timeout=5)
-            
-            messages = client.beta.threads.messages.list(thread_id=thread.id, limit=1)
-            assistant_message = next(msg for msg in messages if msg.role == "assistant")
-            extracted_name = assistant_message.content[0].text.value.strip()
-            
-            client.beta.threads.delete(thread.id)
-            
-            if len(extracted_name) > 2 and extracted_name.lower() != "não":
-                return extracted_name.capitalize()
+            # Mas apenas para mensagens mais longas que possam conter um nome
+            if len(message.strip()) > 10:
+                thread = client.beta.threads.create()
+                client.beta.threads.messages.create(
+                    thread_id=thread.id,
+                    role="user",
+                    content=f"Extraia apenas o primeiro nome desta mensagem (responda APENAS o nome, sem pontuação ou texto adicional). Se não houver nome ou se for apenas uma palavra comum como 'é', 'oi', 'olá', responda apenas 'não'. Mensagem: {message}"
+                )
                 
+                run = client.beta.threads.runs.create(
+                    thread_id=thread.id,
+                    assistant_id=self.assistant_id,
+                    model="gpt-3.5-turbo-0125",
+                    temperature=0.2  # Temperatura mais baixa para maior precisão
+                )
+                
+                self._wait_for_run_completion(thread.id, run.id, timeout=5)
+                
+                messages = client.beta.threads.messages.list(thread_id=thread.id, limit=1)
+                assistant_message = next(msg for msg in messages if msg.role == "assistant")
+                extracted_name = assistant_message.content[0].text.value.strip()
+                
+                client.beta.threads.delete(thread.id)
+                
+                # Validação adicional do nome extraído
+                if (len(extracted_name) > 2 and 
+                    extracted_name.lower() != "não" and 
+                    extracted_name.lower() not in common_words):
+                    return extracted_name.capitalize()
+                    
             return None
-            
+                
         except Exception as e:
             logger.error(f"Erro ao extrair nome: {str(e)}")
             return None

@@ -27,11 +27,15 @@ class WhatsAppChatbot(BaseChatbot):
     def extract_name(self, message: str) -> Optional[str]:
         """Extrai o nome do usuário usando o modelo de linguagem."""
         try:
+            # Verificação inicial para mensagens muito curtas ou que são apenas "é"
+            if len(message.strip()) <= 2 or message.strip().lower() == "é":
+                return None
+                
             temp_thread = self.create_thread()
             client.beta.threads.messages.create(
                 thread_id=temp_thread,
                 role="user",
-                content="Você é um especialista em extrair nomes. Retorne apenas o primeiro nome encontrado ou 'Nenhum nome encontrado'."
+                content="Você é um especialista em extrair nomes. Retorne apenas o primeiro nome encontrado ou 'Nenhum nome encontrado'. Ignore palavras isoladas como 'é', 'sou', 'oi'."
             )
             client.beta.threads.messages.create(
                 thread_id=temp_thread,
@@ -63,7 +67,14 @@ class WhatsAppChatbot(BaseChatbot):
             msgs = client.beta.threads.messages.list(thread_id=temp_thread)
             if msgs.data:
                 extracted = msgs.data[0].content[0].text.value.strip()
-                return None if "nenhum" in extracted.lower() else extracted
+                # Validação adicional do nome extraído
+                if "nenhum" in extracted.lower() or len(extracted) <= 2:
+                    return None
+                # Verificar se o nome extraído não é apenas uma palavra comum
+                common_words = ["oi", "olá", "bom", "boa", "dia", "tarde", "noite", "é", "eh", "sim", "não", "nao"]
+                if extracted.lower() in common_words:
+                    return None
+                return extracted
             return None
         except Exception as e:
             logger.error(f"Erro na extração de nome: {e}", exc_info=True)
