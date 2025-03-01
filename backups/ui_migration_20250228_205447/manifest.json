@@ -1,0 +1,16 @@
+{
+  "timestamp": "2025-02-28T20:54:50.923384",
+  "templates": [
+    "app/templates/index.html",
+    "app/templates/chat.html",
+    "app/templates/select_chatbot.html"
+  ],
+  "static_files": [
+    "app/static/css/style.css",
+    "app/static/js/theme.js",
+    "app/static/js/chat.js"
+  ],
+  "routes": [
+    "app/routes.py"
+  ]
+}

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selecione o Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style_new.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <nav class="top-nav">
+            <div class="nav-content">
+                <div class="nav-brand">
+                    <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span class="brand-text">AI Assistant</span>
+                </div>
+                <div class="nav-actions">
+                    <button id="theme-toggle" class="theme-toggle" aria-label="Alternar tema">
+                        <div class="theme-icon light-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="5"></circle>
+                                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+                            </svg>
+                        </div>
+                        <div class="theme-icon dark-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    <button class="btn-logout">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Selecione o Chatbot</h1>
+                <p class="subtitle">Escolha o tipo de assistente que melhor atende suas necessidades</p>
+            </div>
+
+            <div class="chatbot-grid">
+                <div class="chatbot-card" data-type="vendas">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <h2>Especialista em Métodos de Venda</h2>
+                        <p>Converse com um assistente especializado em técnicas de vendas e atendimento ao cliente.</p>
+                        <ul class="feature-list">
+                            <li>Técnicas avançadas de vendas</li>
+                            <li>Análise de performance</li>
+                            <li>Feedback personalizado</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn-select">
+                            <span>Selecionar</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chatbot-card" data-type="treinamento">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <h2>Treinamento de Vendas</h2>
+                        <p>Pratique suas habilidades de vendas em um ambiente simulado com clientes virtuais.</p>
+                        <ul class="feature-list">
+                            <li>Simulações realistas</li>
+                            <li>Cenários diversos</li>
+                            <li>Aprendizado prático</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn-select">
+                            <span>Selecionar</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chatbot-card" data-type="dashboard">
+                    <div class="card-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="3" y1="9" x2="21" y2="9"></line>
+                            <line x1="9" y1="21" x2="9" y2="9"></line>
+                        </svg>
+                    </div>
+                    <div class="card-content">
+                        <h2>Dashboard</h2>
+                        <p>Visualize seu desempenho e estatísticas de uso do sistema.</p>
+                        <ul class="feature-list">
+                            <li>Métricas detalhadas</li>
+                            <li>Análise de progresso</li>
+                            <li>Relatórios personalizados</li>
+                        </ul>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn-select">
+                            <span>Selecionar</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/theme_new.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle card selection
+            document.querySelectorAll('.chatbot-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const type = this.dataset.type;
+                    window.location.href = type === 'dashboard' ? '/dashboard' : `/chat/${type}`;
+                });
+            });
+
+            // Handle logout
+            document.querySelector('.btn-logout').addEventListener('click', async () => {
+                try {
+                    await fetch('/logout', { method: 'POST' });
+                    window.location.href = '/';
+                } catch (error) {
+                    console.error('Error logging out:', error);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
