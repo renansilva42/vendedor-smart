@@ -234,7 +234,88 @@ a:hover {
 
 .header-buttons {
   display: flex;
-  gap: var(--spacing-md);
+  gap: 1rem;
+  align-items: center;
+}
+
+#chat-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  background-color: var(--bg-color);
+}
+
+#user-input {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  background-color: var(--input-bg-color);
+  color: var(--text-color);
+  font-size: 1rem;
+  transition: all var(--transition-speed);
+}
+
+
+
+#user-input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--light-primary-color);
+}
+
+#send-btn {
+  padding: 1rem 2rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-lg);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+}
+
+#send-btn:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+#new-user-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-lg);
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-speed);
+}
+
+#new-user-btn:hover {
+  background-color: var(--accent-dark);
+  transform: translateY(-2px);
+}
+
+#new-user-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.input-container {
+  padding: 1.5rem 2rem;
+  background-color: var(--card-bg-color);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
 }
 
 .nav {
@@ -355,22 +436,30 @@ a:hover {
 }
 
 .chat-container {
+  max-width: 1200px;
+  margin: 20px auto;
+  background-color: var(--card-bg-color);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+  height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 70px);
-  max-width: 1000px;
-  margin: 0 auto;
 }
 
 .chat-header {
-  padding: var(--spacing-md) var(--spacing-lg);
-  background-color: var(--card-bg-color);
-  border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: var(--shadow-md);
-  transition: background-color var(--transition-speed);
+  background-color: var(--card-bg-color);
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+.chat-header h1 {
+  font-size: 1.5rem;
+  color: var(--text-color);
+  margin: 0;
 }
 
 .chat-messages {
@@ -383,17 +472,65 @@ a:hover {
   gap: var(--spacing-md);
 }
 
+/* Estilização das mensagens */
 .message {
-  display: flex;
-  margin-bottom: var(--spacing-lg);
-  animation: fadeIn 0.3s ease-in-out;
+  margin-bottom: 1.5rem;
+  max-width: 80%;
+  animation: fadeIn 0.3s ease;
 }
 
 .message-content {
-  max-width: 70%;
-  padding: var(--spacing-md) var(--spacing-lg);
+  display: inline-block;
+  padding: 1rem 1.5rem;
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-sm);
+}
+
+.user-message .message-content {
+  background-color: var(--primary-color);
+  color: white;
+  border-bottom-right-radius: 0;
+} 
+
+.bot-message .message-content {
+  background-color: var(--card-bg-color);
+  color: var(--text-color);
+  border-bottom-left-radius: 0;
+}
+.message.user-message {
+  margin-left: auto;
+  text-align: right;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .chat-container {
+    margin: 0;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .chat-header {
+    padding: 1rem;
+    border-radius: 0;
+  }
+
+  .input-container {
+    padding: 1rem;
+  }
+
+  .message {
+    max-width: 90%;
+  }
+
+  #new-user-btn {
+    bottom: 1rem;
+    right: 1rem;
+  }
+}
+
+.message.bot-message {
+  margin-right: auto;
 }
 
 .message-user .message-content {
@@ -483,6 +620,12 @@ a:hover {
   width: 20px;
   height: 20px;
   color: var(--text-color);
+}
+
+.chatbot-button svg {
+  margin-bottom: 10px;
+  width: 32px;
+  height: 32px;
 }
 
 /* Controle de visibilidade dos ícones */
