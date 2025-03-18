@@ -518,3 +518,197 @@ a:hover {
   .auth-container { margin: var(--spacing-lg) auto; }
   .message-content { max-width: 90%; }
 }
+
+/* Ajustes para o container de login */
+.login-container {
+  max-width: 400px;
+  margin: 100px auto;
+  padding: var(--spacing-xl);
+  background-color: var(--card-bg-color);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Ajustes para select-chatbot */
+.select-chatbot-container {
+  max-width: 800px;
+  margin: var(--spacing-xl) auto;
+  padding: var(--spacing-lg);
+}
+
+.chatbot-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-xl);
+}
+
+.chatbot-button {
+  display: block;
+  padding: var(--spacing-lg);
+  background-color: var(--card-bg-color);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  text-decoration: none;
+  color: var(--text-color);
+}
+
+.chatbot-button:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Ajustes para o dashboard */
+.dashboard-container {
+  min-height: 100vh;
+  background-color: var(--bg-color);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-lg);
+  padding: var(--spacing-lg);
+}
+
+.dashboard-item {
+  background-color: var(--card-bg-color);
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.dashboard-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.dashboard-item-controls {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  transition: background-color var(--transition-fast);
+}
+
+.toggle-btn:hover {
+  background-color: var(--hover-color);
+}
+
+/* Ajustes para gráficos e análises */
+.chart-container {
+  height: 300px;
+  margin-bottom: var(--spacing-md);
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.loading-bar-container {
+  width: 100%;
+  height: 20px;
+  background-color: var(--border-color);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  margin: var(--spacing-md) 0;
+}
+
+.loading-bar {
+  height: 100%;
+  background-color: var(--primary-color);
+  transition: width var(--transition-normal);
+  position: relative;
+}
+
+.loading-bar-text {
+  position: absolute;
+  right: var(--spacing-sm);
+  color: white;
+  font-size: var(--font-size-xs);
+  line-height: 20px;
+}
+
+/* Ajustes para análise de mensagens */
+.analysis-controls {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.analysis-filters {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.select-control {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  background-color: var(--input-bg-color);
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+/* Ajustes para página de erro */
+.error-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  background: linear-gradient(135deg, var(--light-primary-color), var(--bg-color));
+}
+
+.error-content {
+  text-align: center;
+  background-color: var(--card-bg-color);
+  padding: var(--spacing-xxl);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+  max-width: 500px;
+  width: 100%;
+}
+
+/* Ajustes responsivos adicionais */
+@media (max-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .analysis-controls {
+    flex-direction: column;
+  }
+  
+  .analysis-filters {
+    width: 100%;
+  }
+  
+  .select-control {
+    width: 100%;
+  }
+}
+
+/* Animações adicionais */
+.animated {
+  animation: pulse 1.5s infinite;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
