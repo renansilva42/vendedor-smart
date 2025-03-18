@@ -1,21 +1,71 @@
 // app/static/js/chat.js
 document.addEventListener('DOMContentLoaded', function() {
-    const chatContainer = document.getElementById('chat-container');
-    const userInput = document.getElementById('user-input');
-    const sendBtn = document.getElementById('send-btn');
-    const backBtn = document.getElementById('back-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const newUserBtn = document.getElementById('new-user-btn');
-    
-    let isProcessing = false;
-    let userName = 'Usuário';
-    
-    // Obter thread_id do elemento data
-    let threadId = document.getElementById('chat-container').dataset.threadId;
-    const chatbotType = document.getElementById('chat-container').dataset.chatbotType;
-    
-    // Carregar histórico de chat
-    loadChatHistory();
+  const chatContainer = document.querySelector('.chat-container');
+  const userInput = document.getElementById('user-input');
+  const sendBtn = document.getElementById('send-btn');
+  const backBtn = document.getElementById('back-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  const newUserBtn = document.getElementById('new-user-btn');
+
+  // Verificar se os elementos foram encontrados e logar no console
+  if (!chatContainer) console.error('Chat container não encontrado');
+  if (!userInput) console.error('Input não encontrado');
+  if (!sendBtn) console.error('Botão enviar não encontrado');
+  if (!backBtn) console.error('Botão voltar não encontrado');
+  if (!logoutBtn) console.error('Botão logout não encontrado');
+  if (!newUserBtn) console.error('Botão novo usuário não encontrado');
+  
+  let isProcessing = false;
+  let userName = 'Usuário';
+  
+  // Obter thread_id do elemento data
+  let threadId = chatContainer ? chatContainer.dataset.threadId : null;
+  const chatbotType = chatContainer ? chatContainer.dataset.chatbotType : null;
+  
+  // Event listeners com logs
+  if (sendBtn) {
+      sendBtn.addEventListener('click', function() {
+          console.log('Botão enviar clicado');
+          sendMessage();
+      });
+  }
+
+  if (backBtn) {
+      backBtn.addEventListener('click', function() {
+          console.log('Botão voltar clicado');
+          window.location.href = '/select_chatbot';
+      });
+  }
+
+  if (logoutBtn) {
+      logoutBtn.addEventListener('click', function() {
+          console.log('Botão logout clicado');
+          window.location.href = '/logout';
+      });
+  }
+
+  if (newUserBtn) {
+      newUserBtn.addEventListener('click', function() {
+          console.log('Botão novo usuário clicado');
+          if (confirm('Iniciar uma nova conversa? O histórico atual será mantido, mas você começará com um novo usuário.')) {
+              startNewConversation();
+          }
+      });
+  }
+
+  if (userInput) {
+      userInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              sendMessage();
+          }
+      });
+  }
+
+  // Carregar histórico de chat apenas se o container existir
+  if (chatContainer) {
+      loadChatHistory();
+  }
     
     // Event listeners
     sendBtn.addEventListener('click', sendMessage);
@@ -279,5 +329,28 @@ document.addEventListener('DOMContentLoaded', function() {
       removeElement(loadingId);
       addSystemMessage('Erro ao iniciar nova conversa: ' + error.message);
     });
+  }
+});
+
+// Event listeners com logs
+sendBtn.addEventListener('click', function() {
+  console.log('Botão enviar clicado');
+  sendMessage();
+});
+
+backBtn.addEventListener('click', function() {
+  console.log('Botão voltar clicado');
+  window.location.href = '/select_chatbot';
+});
+
+logoutBtn.addEventListener('click', function() {
+  console.log('Botão logout clicado');
+  window.location.href = '/logout';
+});
+
+newUserBtn.addEventListener('click', function() {
+  console.log('Botão novo usuário clicado');
+  if (confirm('Iniciar uma nova conversa? O histórico atual será mantido, mas você começará com um novo usuário.')) {
+      startNewConversation();
   }
 });
