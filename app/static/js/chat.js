@@ -70,63 +70,54 @@ document.addEventListener('DOMContentLoaded', function() {
     function sendMessage() {
       const message = userInput.value.trim();
       if (!message || isProcessing) return;
-      
+  
       isProcessing = true;
-      
-      // Obter o thread_id atual do DOM
+  
       const currentThreadId = document.getElementById('chat-container').dataset.threadId;
-      
-      // Adicionar mensagem do usuário à interface
+  
       addUserMessage(message);
       userInput.value = '';
-      
-      // Mostrar indicador de carregamento
+  
       const loadingId = 'loading-' + Date.now();
       addLoadingMessage(loadingId);
-      
-      // Enviar mensagem para o backend
+  
       fetch('/send_message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: message,
-          thread_id: currentThreadId,
-          chatbot_type: chatbotType
-        }),
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+              message: message,
+              thread_id: currentThreadId,
+              chatbot_type: chatbotType
+          }),
       })
       .then(response => response.json())
       .then(data => {
-        // Remover indicador de carregamento
-        removeElement(loadingId);
-        
-        if (data.error) {
-          addSystemMessage('Erro: ' + data.error);
-          return;
-        }
-        
-        // Atualizar nome do usuário se necessário
-        if (data.user_name && data.user_name !== userName) {
-          userName = data.user_name;
-          // Atualizar nome em mensagens anteriores
-          document.querySelectorAll('.chat-message--user .chat-message__sender').forEach(el => {
-            el.textContent = userName;
-          });
-        }
-        
-        // Adicionar resposta do assistente
-        addAssistantMessage(data.response);
-        
-        isProcessing = false;
+          removeElement(loadingId);
+  
+          if (data.error) {
+              addSystemMessage('Erro: ' + data.error);
+              return;
+          }
+  
+          if (data.user_name && data.user_name !== userName) {
+              userName = data.user_name;
+              document.querySelectorAll('.chat-message--user .chat-message__sender').forEach(el => {
+                  el.textContent = userName;
+              });
+          }
+  
+          addAssistantMessage(data.response);
+          isProcessing = false;
       })
       .catch(error => {
-        console.error('Erro:', error);
-        removeElement(loadingId);
-        addSystemMessage('Ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.');
-        isProcessing = false;
+          console.error('Erro:', error);
+          removeElement(loadingId);
+          addSystemMessage('Ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.');
+          isProcessing = false;
       });
-    }
+  }
     
     function addUserMessage(message, timestamp = null, name = null) {
       const messageDiv = document.createElement('div');

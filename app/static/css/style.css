@@ -98,7 +98,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  transition: background-color var(--transition-speed), color var(--transition-speed);
+  margin: 0; /* Remover margens padrão */
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -257,7 +257,6 @@ a:hover {
 }
 
 
-
 #user-input:focus {
   border-color: var(--primary-color);
   outline: none;
@@ -265,7 +264,7 @@ a:hover {
 }
 
 #send-btn {
-  padding: 1rem 2rem;
+  padding: 0.75rem 1.5rem; /* Ajustado para consistência */
   background-color: var(--primary-color);
   color: white;
   border: none;
@@ -282,7 +281,7 @@ a:hover {
 
 #new-user-btn {
   position: fixed;
-  bottom: 5rem; /* Alterado de 2rem para 5rem */
+  bottom: 5rem;
   right: 2rem;
   padding: 0.75rem 1.5rem;
   background-color: var(--accent-color);
@@ -293,7 +292,7 @@ a:hover {
   align-items: center;
   gap: 0.5rem;
   box-shadow: var(--shadow-md);
-  z-index: 1000; /* Adicionado */
+  z-index: 1000;
 }
 
 #new-user-btn:hover {
@@ -307,8 +306,8 @@ a:hover {
 }
 
 .input-container {
-  position: sticky; /* Adicionado */
-  bottom: 0; /* Adicionado */
+  position: sticky;
+  bottom: 0;
   background-color: var(--card-bg-color);
   padding: 1rem 2rem;
   border-top: 1px solid var(--border-color);
@@ -436,30 +435,31 @@ a:hover {
 
 .chat-container {
   max-width: 1200px;
-  margin: 0 auto; /* Alterado de 20px auto para 0 auto */
-  height: 100vh; /* Alterado de calc(100vh - 40px) para 100vh */
+  margin: 0 auto;
+  height: calc(100vh - 140px); /* Ajustado para considerar header e input */
   background-color: var(--card-bg-color);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
 
 .chat-header {
   padding: 1rem 2rem;
   border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  background-color: var(--card-bg-color);
   position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--card-bg-color);
-  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
-  top: 0;
-  z-index: 100;
 }
 
 .chat-header h1 {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   color: var(--text-color);
   margin: 0;
 }
@@ -477,7 +477,7 @@ a:hover {
 /* Estilização das mensagens */
 .message {
   margin-bottom: 1rem;
-  max-width: 70%; /* Alterado de 80% para 70% */
+  max-width: 70%;
   word-wrap: break-word;
 }
 
@@ -491,7 +491,7 @@ a:hover {
   background-color: var(--primary-color);
   color: white;
   border-bottom-right-radius: 0;
-} 
+}
 
 .bot-message .message-content {
   background-color: var(--card-bg-color);
@@ -577,6 +577,10 @@ a:hover {
   color: rgba(255, 255, 255, 0.8);
 }
 
+.user-message .message-time {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .chat-input-container {
   padding: var(--spacing-md) var(--spacing-lg);
   background-color: var(--card-bg-color);
@@ -653,21 +657,21 @@ a:hover {
   display: block;
 }
 
-[data-theme="dark"] .theme-toggle .moon-icon {
-  display: block;
-}
-
-[data-theme="dark"] .theme-toggle .sun-icon {
-  display: none;
-}
-
-/* Ajustes para gráficos no modo escuro */
-[data-theme="dark"] .chart-container {
+/* Tema Escuro */
+[data-theme="dark"] .chat-header {
   background-color: var(--card-bg-color);
 }
 
-[data-theme="dark"] .chart-legend {
-  color: var(--text-color);
+[data-theme="dark"] .chat-messages {
+  background-color: var(--bg-color);
+}
+
+[data-theme="dark"] .input-container {
+  background-color: var(--card-bg-color);
+}
+
+[data-theme="dark"] .bot-message .message-content {
+  background-color: var(--card-bg-color);
 }
 
 /* Cores personalizadas para o gráfico de scores */

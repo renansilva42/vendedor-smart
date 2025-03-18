@@ -29,19 +29,34 @@
                     <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                 </svg>
             </button>
-            <button id="back-btn" class="button button-secondary">Voltar</button>
-            <button id="logout-btn" class="button button-secondary">Logout</button>
+            <button id="back-btn" class="button btn-secondary">Voltar</button>
+            <button id="logout-btn" class="button btn-secondary">Logout</button>
         </div>
     </div>
     
-    <div id="chat-container" data-thread-id="{{ thread_id }}" data-chatbot-type="{{ chatbot_type }}"></div>
+    <div class="chat-container" data-thread-id="{{ thread_id }}" data-chatbot-type="{{ chatbot_type }}">
+        <div class="chat-messages">
+            <!-- Exemplo de mensagem do usuário -->
+            <div class="message user-message">
+                <div class="message-content">Olá!</div>
+                <div class="message-time">01:08:50</div>
+            </div>
+            <!-- Exemplo de mensagem do bot -->
+            <div class="message bot-message">
+                <div class="message-content">Olá! Como posso ajudar você hoje?</div>
+                <div class="message-time">01:08:55</div>
+            </div>
+            <!-- Exemplo de mensagem de erro -->
+            <div class="alert alert-error">Erro: BaseChatbot.send_message() takes 3 positional arguments but 4 were given</div>
+        </div>
+    </div>
     
     <div class="input-container">
         <input type="text" id="user-input" placeholder="Digite sua mensagem...">
         <button id="send-btn" class="button">Enviar</button>
     </div>
     
-    <button id="new-user-btn">
+    <button id="new-user-btn" class="button">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
@@ -52,7 +67,6 @@
     </button>
 
     <script>
-        // Passar variáveis do Flask para o JavaScript
         const chatbotType = "{{ chatbot_type }}";
     </script>
     <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
