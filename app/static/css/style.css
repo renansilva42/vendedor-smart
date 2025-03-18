@@ -241,19 +241,19 @@ a:hover {
 #chat-container {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem;
+  padding: 1rem 2rem;
   background-color: var(--bg-color);
+  margin-bottom: 0; /* Adicionado */
 }
 
 #user-input {
   flex: 1;
-  padding: 1rem 1.5rem;
-  border: 2px solid var(--border-color);
-  border-radius: var(--border-radius-lg);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
   background-color: var(--input-bg-color);
   color: var(--text-color);
-  font-size: 1rem;
-  transition: all var(--transition-speed);
+  font-size: var(--font-size-md);
 }
 
 
@@ -282,20 +282,18 @@ a:hover {
 
 #new-user-btn {
   position: fixed;
-  bottom: 2rem;
+  bottom: 5rem; /* Alterado de 2rem para 5rem */
   right: 2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.5rem;
   background-color: var(--accent-color);
   color: white;
   border: none;
-  border-radius: var(--border-radius-lg);
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: var(--shadow-lg);
-  transition: all var(--transition-speed);
+  border-radius: var(--border-radius-md);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-md);
+  z-index: 1000; /* Adicionado */
 }
 
 #new-user-btn:hover {
@@ -309,13 +307,14 @@ a:hover {
 }
 
 .input-container {
-  padding: 1.5rem 2rem;
+  position: sticky; /* Adicionado */
+  bottom: 0; /* Adicionado */
   background-color: var(--card-bg-color);
+  padding: 1rem 2rem;
   border-top: 1px solid var(--border-color);
   display: flex;
   gap: 1rem;
   align-items: center;
-  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
 }
 
 .nav {
@@ -437,23 +436,26 @@ a:hover {
 
 .chat-container {
   max-width: 1200px;
-  margin: 20px auto;
+  margin: 0 auto; /* Alterado de 20px auto para 0 auto */
+  height: 100vh; /* Alterado de calc(100vh - 40px) para 100vh */
   background-color: var(--card-bg-color);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-lg);
-  height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
 }
 
 .chat-header {
-  padding: 1.5rem 2rem;
+  padding: 1rem 2rem;
   border-bottom: 1px solid var(--border-color);
+  position: sticky;
   display: flex;
   justify-content: space-between;
   align-items: center;
   background-color: var(--card-bg-color);
   border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+  top: 0;
+  z-index: 100;
 }
 
 .chat-header h1 {
@@ -474,15 +476,14 @@ a:hover {
 
 /* Estilização das mensagens */
 .message {
-  margin-bottom: 1.5rem;
-  max-width: 80%;
-  animation: fadeIn 0.3s ease;
+  margin-bottom: 1rem;
+  max-width: 70%; /* Alterado de 80% para 70% */
+  word-wrap: break-word;
 }
 
 .message-content {
-  display: inline-block;
-  padding: 1rem 1.5rem;
-  border-radius: var(--border-radius-lg);
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius-md);
   box-shadow: var(--shadow-sm);
 }
 
@@ -497,6 +498,13 @@ a:hover {
   color: var(--text-color);
   border-bottom-left-radius: 0;
 }
+
+.user-message {
+  margin-left: auto;
+  background-color: var(--primary-color);
+  color: white;
+}
+
 .message.user-message {
   margin-left: auto;
   text-align: right;
@@ -505,28 +513,36 @@ a:hover {
 /* Responsividade */
 @media (max-width: 768px) {
   .chat-container {
-    margin: 0;
-    height: 100vh;
-    border-radius: 0;
+      margin: 0;
+      height: 100vh;
   }
 
   .chat-header {
-    padding: 1rem;
-    border-radius: 0;
+      padding: 0.75rem 1rem;
   }
 
   .input-container {
-    padding: 1rem;
+      padding: 0.75rem 1rem;
+  }
+
+  #chat-container {
+      padding: 1rem;
   }
 
   .message {
-    max-width: 90%;
+      max-width: 85%;
   }
 
   #new-user-btn {
-    bottom: 1rem;
-    right: 1rem;
+      bottom: 4rem;
+      right: 1rem;
   }
+}
+
+.bot-message {
+  margin-right: auto;
+  background-color: var(--card-bg-color);
+  border: 1px solid var(--border-color);
 }
 
 .message.bot-message {
