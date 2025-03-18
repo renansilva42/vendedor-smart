@@ -49,3 +49,4 @@ coverage.xml
 
 # Arquivos específicos do seu projeto (adicione conforme necessário)
 # config.py  # Descomente se seu config.py contiver informações sensíveis
+.qodo

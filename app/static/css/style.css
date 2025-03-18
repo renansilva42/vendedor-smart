@@ -971,3 +971,100 @@ a:hover {
 .fade-in {
   animation: fadeIn 0.3s ease-in-out;
 }
+
+
+/* Ajustes específicos para o chat */
+
+.chat-message {
+  padding: 10px 15px;
+  margin-bottom: 15px;
+  border-radius: 12px;
+  max-width: 75%;
+  word-break: break-word;
+  position: relative;
+  clear: both;
+}
+
+.chat-message--user {
+  background-color: var(--primary-color);
+  color: white;
+  float: right;
+  border-bottom-right-radius: 3px;
+  text-align: right;
+}
+
+.chat-message--assistant {
+  background-color: var(--card-bg-color);
+  color: var(--text-color);
+  float: left;
+  border-bottom-left-radius: 3px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-message--system {
+  background-color: var(--light-bg-color);
+  color: var(--text-secondary-color);
+  width: 100%;
+  max-width: 100%;
+  text-align: center;
+  margin: 10px auto;
+  padding: 8px;
+  border-radius: 8px;
+  font-style: italic;
+  clear: both;
+}
+
+.chat-message__sender {
+  font-weight: bold;
+  margin-bottom: 5px;
+  font-size: 0.9em;
+}
+
+.chat-message__content {
+  line-height: 1.5;
+}
+
+.chat-message__timestamp {
+  font-size: 0.75em;
+  opacity: 0.7;
+  margin-top: 5px;
+  text-align: right;
+}
+
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 20px;
+}
+
+.loading-dots span {
+  width: 8px;
+  height: 8px;
+  margin: 0 2px;
+  background-color: var(--text-secondary-color);
+  border-radius: 50%;
+  display: inline-block;
+  animation: dots-bounce 1s infinite ease-in-out;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dots-bounce {
+  0%, 80%, 100% {
+      transform: scale(0.6);
+      opacity: 0.6;
+  }
+  40% {
+      transform: scale(1);
+      opacity: 1;
+  }
+}
+

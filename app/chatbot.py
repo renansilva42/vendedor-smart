@@ -109,9 +109,8 @@ class Chatbot:
             assistant_message = next(msg for msg in messages if msg.role == "assistant")
             response = assistant_message.content[0].text.value
 
-            # Salvar mensagens no banco de dados
+            # Salvar mensagem do assistente no banco de dados
             from app.models import Message
-            Message.create(thread_id, "user", message, chatbot_type=self.chatbot_type, user_name=user_name)
             Message.create(thread_id, "assistant", response, chatbot_type=self.chatbot_type)
 
             return {
