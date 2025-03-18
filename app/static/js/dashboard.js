@@ -1078,3 +1078,44 @@ document.addEventListener('DOMContentLoaded', function() {
     // Adicionar estilos
     addDashboardStyles();
 });
+
+// No arquivo que inicializa o gráfico (provavelmente dashboard.js)
+const scoresChartConfig = {
+    options: {
+      plugins: {
+        legend: {
+          labels: {
+            color: getComputedStyle(document.documentElement).getPropertyValue('--text-color')
+          }
+        }
+      },
+      scales: {
+        y: {
+          grid: {
+            color: getComputedStyle(document.documentElement).getPropertyValue('--border-color')
+          },
+          ticks: {
+            color: getComputedStyle(document.documentElement).getPropertyValue('--text-color')
+          }
+        },
+        x: {
+          grid: {
+            color: getComputedStyle(document.documentElement).getPropertyValue('--border-color')
+          },
+          ticks: {
+            color: getComputedStyle(document.documentElement).getPropertyValue('--text-color')
+          }
+        }
+      }
+    },
+    data: {
+      datasets: [{
+        backgroundColor: [
+          getComputedStyle(document.documentElement).getPropertyValue('--chart-color-1'),
+          getComputedStyle(document.documentElement).getPropertyValue('--chart-color-2'),
+          getComputedStyle(document.documentElement).getPropertyValue('--chart-color-3'),
+          getComputedStyle(document.documentElement).getPropertyValue('--chart-color-4')
+        ]
+      }]
+    }
+  };
