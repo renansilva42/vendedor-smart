@@ -85,7 +85,7 @@ class BaseChatbot:
             logger.error(f"Erro ao criar thread: {str(e)}")
             raise RuntimeError(f"Não foi possível criar uma nova thread: {str(e)}")
     
-    def send_message(self, thread_id: str, message: str) -> Dict[str, Any]:
+    def send_message(self, thread_id: str, message: str, user_name: str = "Usuário") -> Dict[str, Any]:
         """Envia mensagem para o thread com tratamento de erros aprimorado."""
         try:
             return client.beta.threads.messages.create(
