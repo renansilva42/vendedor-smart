@@ -72,6 +72,13 @@ class User:
         logger.info(f"Criando usuário: {user_id}, nome: {name}, email: {email}, login_count: {login_count}")
         current_time = datetime.datetime.now(TIMEZONE).isoformat()
         try:
+            # Check if user with email already exists to avoid duplicate key error
+            if email:
+                existing = supabase.table('usuarios_chatbot').select('*').eq('email', email).execute()
+                if existing.data:
+                    logger.info(f"Usuário com email {email} já existe: {existing.data[0]}")
+                    return existing.data[0]
+
             user_data = {
                 'id': user_id,
                 'name': name or "Usuário Anônimo",
@@ -101,13 +108,28 @@ class User:
             
             logger.info(f"Atualizando {field_name} para usuário {user_id} com valor {thread_id}")
             
-            response = supabase.table('usuarios_chatbot').update(update_data).eq('id', user_id).execute()
-            
-            if not response.data:
+            # Atualizar o thread_id
+            response_update = supabase.table('usuarios_chatbot').update(update_data).eq('id', user_id).execute()
+            # Check for error attribute or status code
+            if hasattr(response_update, 'error') and response_update.error:
+                logger.error(f"Erro ao atualizar thread_id para usuário {user_id}: {response_update.error}")
+                return False
+            if hasattr(response_update, 'status_code') and response_update.status_code >= 400:
+                logger.error(f"Erro HTTP ao atualizar thread_id para usuário {user_id}: status {response_update.status_code}")
+                return False
+            if not response_update.data:
                 logger.error(f"Nenhum dado retornado ao atualizar thread_id para usuário {user_id}")
                 return False
+            
+            # Verificar se a atualização foi aplicada buscando o usuário atualizado
+            response = supabase.table('usuarios_chatbot').select('*').eq('id', user_id).execute()
+            logger.debug(f"Resposta da verificação de atualização para usuário {user_id}: {response.data}")
+            
+            if not response.data:
+                logger.error(f"Falha ao recuperar usuário após atualização do thread_id para usuário {user_id}")
+                return False
                 
-            logger.info(f"Thread_id atualizado com sucesso: {response.data}")
+            logger.info(f"Thread_id atualizado com sucesso para usuário {user_id}")
             return True
             
         except Exception as e:
@@ -278,6 +300,13 @@ class Message:
         logger.info(f"Criando mensagem: thread_id={thread_id}, role={role}, user_id={user_id}, chatbot_type={chatbot_type}")
         current_time = datetime.datetime.now(TIMEZONE).isoformat()
         try:
+            # Verificar se o user_id existe na tabela usuarios_chatbot
+            if user_id:
+                user_check = supabase.table('usuarios_chatbot').select('id').eq('id', user_id).execute()
+                if not user_check.data:
+                    logger.error(f"Falha ao criar mensagem: user_id {user_id} não existe na tabela usuarios_chatbot")
+                    return None
+
             message_data = {
                 'thread_id': thread_id,
                 'role': role,

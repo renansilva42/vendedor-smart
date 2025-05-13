@@ -42,6 +42,7 @@ def check_session_expiry():
     if 'user_id' in session:
         session['last_activity'] = datetime.datetime.now().isoformat()
 
+
 @main.route('/')
 def index():
     """Rota principal que exibe a página de login ou redireciona para seleção de chatbot."""
@@ -66,15 +67,22 @@ def login():
             # Obter ou criar usuário
             user = User.get_or_create_by_email(email)
             
-            if not user:
+            if not user or 'id' not in user:
                 logger.error(f"Falha ao obter ou criar usuário para email: {email}")
                 return jsonify({'success': False, 'message': 'Erro ao processar usuário'})
+            
+            # Verificar se o usuário existe no banco de dados
+            user_check = User.get_name(user['id'])
+            # Accept "Usuário Anônimo" as valid user name
+            if user_check == "Nenhum nome encontrado":
+                logger.error(f"Usuário com ID {user['id']} não existe no banco de dados após login")
+                return jsonify({'success': False, 'message': 'Usuário inválido ou não encontrado'})
             
             # Configurar sessão
             session['user_id'] = user['id']
             session['email'] = email
             
-            logger.info(f"Login bem-sucedido para: {email}")
+            logger.info(f"Login bem-sucedido para: {email} com user_id: {user['id']}")
             return jsonify({'success': True})
         else:
             logger.warning(f"Tentativa de login com credenciais inválidas: {email}")
@@ -82,6 +90,8 @@ def login():
     except Exception as e:
         logger.error(f"Erro no login: {str(e)}", exc_info=True)
         return jsonify({'success': False, 'message': f'Erro no servidor: {str(e)}'})
+
+
 
 @main.route('/logout')
 def logout():
@@ -141,93 +151,194 @@ def chat(chatbot_type: str):
 def send_message():
     """Envia uma mensagem para o chatbot e retorna a resposta."""
     try:
+        # Validar se a requisição é JSON
+        if not request.is_json:
+            logger.warning("Requisição não contém JSON válido")
+            return jsonify({'error': 'Requisição deve ser JSON'}), 400
+
         data = request.json
         message = data.get('message', '').strip()
         thread_id = data.get('thread_id')
         chatbot_type = data.get('chatbot_type')
         
-        if not message or not thread_id or not chatbot_type:
-            logger.warning("Dados incompletos na requisição de envio de mensagem")
-            return jsonify({'error': 'Dados incompletos'})
+        # Validação mais robusta dos dados
+        if not all([message, thread_id, chatbot_type]):
+            missing_fields = [field for field, value in {
+                'message': message,
+                'thread_id': thread_id,
+                'chatbot_type': chatbot_type
+            }.items() if not value]
+            logger.warning(f"Campos obrigatórios ausentes: {missing_fields}")
+            return jsonify({'error': f'Campos obrigatórios ausentes: {missing_fields}'}), 400
         
         user_id = session.get('user_id')
-        user_name = User.get_name(user_id)
+        logger.info(f"User ID from session: {user_id}")
+        if not user_id:
+            logger.error("ID do usuário não encontrado na sessão")
+            return jsonify({'error': 'Sessão inválida'}), 401
+
+        # Verificar se o usuário existe no banco de dados
+        user_check = User.get_name(user_id)
+        logger.info(f"User name from DB: {user_check}")
+        # Accept "Usuário Anônimo" as valid user name
+        if user_check == "Nenhum nome encontrado":
+            logger.error(f"Usuário com ID {user_id} não existe no banco de dados. Limpando sessão.")
+            session.clear()
+            return jsonify({'error': 'Usuário inválido ou não encontrado. Sessão encerrada, por favor faça login novamente.'}), 401
         
-        # Criar chatbot
+        user_name = user_check
+        
+        # Criar chatbot com validação de tipo
+        if chatbot_type not in ChatbotFactory.get_available_types():
+            logger.error(f"Tipo de chatbot inválido: {chatbot_type}")
+            return jsonify({'error': 'Tipo de chatbot inválido'}), 400
+            
         chatbot = ChatbotFactory.create_chatbot(chatbot_type)
         if not chatbot:
             logger.error(f"Falha ao criar chatbot do tipo: {chatbot_type}")
-            return jsonify({'error': 'Tipo de chatbot inválido'})
+            return jsonify({'error': 'Erro ao criar chatbot'}), 500
         
         # Registrar mensagem do usuário
-        Message.create(thread_id, 'user', message, user_id, chatbot_type, user_name)
+        user_message = Message.create(
+            thread_id=thread_id,
+            role='user',
+            content=message,
+            user_id=user_id,
+            chatbot_type=chatbot_type,
+            user_name=user_name
+        )
+        
+        if not user_message:
+            logger.error("Falha ao registrar mensagem do usuário")
+            return jsonify({'error': 'Erro ao registrar mensagem'}), 500
         
         # Enviar mensagem e obter resposta
-        response_data = chatbot.send_message(thread_id, message, user_name)
+        try:
+            response_data = chatbot.send_message(thread_id, message, user_name)
+            
+            # Garantir que a resposta seja serializável
+            if hasattr(response_data, '__dict__'):
+                response_data = {
+                    'content': response_data.content if hasattr(response_data, 'content') else str(response_data),
+                    'thread_id': thread_id,
+                    'user_name': user_name
+                }
+            
+            # Registrar resposta do chatbot
+            Message.create(
+                thread_id=thread_id,
+                role='assistant',
+                content=response_data.get('content', ''),
+                user_id=user_id,
+                chatbot_type=chatbot_type,
+                user_name='Assistente'
+            )
+        except Exception as e:
+            logger.error(f"Erro ao processar resposta do chatbot: {str(e)}", exc_info=True)
+            return jsonify({'error': 'Erro ao processar resposta'}), 500
         
-        # Verificar se um nome foi extraído
-        extracted_name = chatbot.extract_name(message)
-        if extracted_name and extracted_name != user_name and len(extracted_name) > 2:
-            # Atualizar nome do usuário
-            User.update_name(user_id, extracted_name)
-            # Atualizar nome nas mensagens anteriores
-            Message.update_user_name(thread_id, user_id, extracted_name)
-            logger.info(f"Nome do usuário atualizado: {user_id} -> {extracted_name}")
+        # Processar extração de nome
+        try:
+            extracted_name = chatbot.extract_name(message)
+            if (extracted_name and 
+                extracted_name != user_name and 
+                len(extracted_name) > 2 and 
+                extracted_name != "Usuário Anônimo"):
+                
+                # Atualizar nome do usuário
+                if User.update_name(user_id, extracted_name):
+                    # Atualizar nome nas mensagens anteriores
+                    Message.update_user_name(thread_id, user_id, extracted_name)
+                    logger.info(f"Nome do usuário atualizado: {user_id} -> {extracted_name}")
+                    response_data['user_name'] = extracted_name
+        except Exception as e:
+            logger.warning(f"Erro ao processar extração de nome: {str(e)}")
+            # Não interromper o fluxo por erro na extração de nome
         
         # Atualizar última interação
-        User.update_last_interaction(user_id, chatbot_type)
+        try:
+            User.update_last_interaction(user_id, chatbot_type)
+        except Exception as e:
+            logger.warning(f"Erro ao atualizar última interação: {str(e)}")
+            # Não interromper o fluxo por erro na atualização
         
         return jsonify(response_data)
+        
     except Exception as e:
         logger.error(f"Erro ao enviar mensagem: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)})
+        return jsonify({'error': str(e)}), 500
+
 
 @main.route('/new_user', methods=['POST'])
 @login_required
 def new_user():
-    """Cria um novo usuário e inicializa uma thread de chatbot para ele."""
+    """Cria uma nova thread de chatbot para o usuário logado."""
     try:
+        # Validar se a requisição é JSON
+        if not request.is_json:
+            logger.warning("Requisição não contém JSON válido")
+            return jsonify({'error': 'Requisição deve ser JSON'}), 400
+
         data = request.json
         chatbot_type = data.get('chatbot_type')
         
+        # Validar tipo de chatbot
         if not chatbot_type:
-            return jsonify({'error': 'Tipo de chatbot não especificado'})
+            logger.warning("Tipo de chatbot não especificado na requisição")
+            return jsonify({'error': 'Tipo de chatbot não especificado'}), 400
+            
+        if chatbot_type not in ['atual', 'novo', 'vendas']:
+            logger.error(f"Tipo de chatbot inválido: {chatbot_type}")
+            return jsonify({'error': 'Tipo de chatbot inválido'}), 400
         
-        # Criar novo ID de usuário
-        new_user_id = str(uuid.uuid4())
+        user_id = session.get('user_id')
+        if not user_id:
+            logger.error("ID do usuário não encontrado na sessão")
+            return jsonify({'error': 'Sessão inválida'}), 401
         
-        # Atualizar sessão
-        old_user_id = session.get('user_id')
-        session['user_id'] = new_user_id
-        
-        # Criar usuário no banco de dados
-        email = session.get('email')
-        User.create(new_user_id, name="Novo Usuário", email=email)
-        
-        # Criar nova thread
+        # Criar chatbot e nova thread
         chatbot = ChatbotFactory.create_chatbot(chatbot_type)
         if not chatbot:
             logger.error(f"Falha ao criar chatbot do tipo: {chatbot_type}")
-            return jsonify({'error': 'Tipo de chatbot inválido'})
+            return jsonify({'error': 'Erro ao criar chatbot'}), 500
             
         thread_id = chatbot.create_thread()
+        if not thread_id:
+            logger.error("Falha ao criar thread do chatbot")
+            return jsonify({'error': 'Erro ao criar thread'}), 500
         
         # Atualizar thread_id do usuário
+        update_success = False
         if chatbot_type == 'atual':
-            User.update_thread_id_atual(new_user_id, thread_id)
+            result = User.update_thread_id_atual(user_id, thread_id)
+        elif chatbot_type == 'novo':
+            result = User.update_thread_id_novo(user_id, thread_id)
+        elif chatbot_type == 'vendas':
+            # Assuming there is a method to update vendas thread_id, else fallback to novo
+            if hasattr(User, 'update_thread_id_vendas'):
+                result = User.update_thread_id_vendas(user_id, thread_id)
+            else:
+                result = User.update_thread_id_novo(user_id, thread_id)
         else:
-            User.update_thread_id_novo(new_user_id, thread_id)
+            result = False
+
+        if not result:
+            logger.error(f"Falha ao atualizar thread_id do usuário: {user_id}")
+            return jsonify({'error': 'Erro ao atualizar thread_id'}), 500
         
-        logger.info(f"Novo usuário criado: {new_user_id}, substituindo: {old_user_id}")
+        # Registrar criação bem-sucedida
+        logger.info(f"Nova thread criada para usuário {user_id}, tipo {chatbot_type}: {thread_id}")
         
         return jsonify({
             'success': True,
-            'user_id': new_user_id,
-            'thread_id': thread_id
+            'user_id': user_id,
+            'thread_id': thread_id,
+            'chatbot_type': chatbot_type
         })
+        
     except Exception as e:
-        logger.error(f"Erro ao criar novo usuário: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)})
+        logger.error(f"Erro ao processar requisição de nova thread: {str(e)}", exc_info=True)
+        return jsonify({'error': 'Erro ao processar requisição'}), 500
 
 @main.route('/get_chat_history')
 @login_required

@@ -17,6 +17,8 @@ class Config:
     # Configurações do Supabase
     SUPABASE_URL = os.getenv('SUPABASE_URL')
     SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+    print(f"DEBUG: Loaded SUPABASE_URL = '{SUPABASE_URL}'")
+    print(f"DEBUG: Loaded SUPABASE_KEY = '{SUPABASE_KEY[:4]}...' (masked)")
     
     # Configurações da OpenAI
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')

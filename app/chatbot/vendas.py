@@ -124,3 +124,32 @@ class VendasChatbot(BaseChatbot):
         except Exception as e:
             logger.error(f"Erro ao registrar logs: {str(e)}", exc_info=True)
             return f"Erro no registro: {str(e)}"
+
+    def _format_response(self, messages: List[Dict[str, Any]], thread_id: str) -> Dict[str, Any]:
+        """Formata a resposta do chatbot a partir das mensagens da thread."""
+        try:
+            # Filtrar mensagens do assistente
+            assistant_messages = [msg for msg in messages if msg.role == "assistant"]
+            if not assistant_messages:
+                return {"response": "Desculpe, não consegui gerar uma resposta.", "thread_id": thread_id}
+            
+            # Concatenar conteúdos das mensagens do assistente, convertendo listas to strings if needed
+            parts = []
+            for msg in assistant_messages:
+                content = msg.content
+                if isinstance(content, list):
+                    # Detect if list contains TextContentBlock objects with text.value
+                    if content and hasattr(content[0], "text") and hasattr(content[0].text, "value"):
+                        parts.append(" ".join(str(c.text.value) for c in content))
+                    else:
+                        parts.append(" ".join(str(c) for c in content))
+                elif isinstance(content, str):
+                    parts.append(content)
+                else:
+                    parts.append(str(content))
+            full_response = " ".join(parts)
+            
+            return {"response": full_response.strip(), "thread_id": thread_id}
+        except Exception as e:
+            logger.error(f"Erro ao formatar resposta: {str(e)}", exc_info=True)
+            return {"response": "Erro ao formatar a resposta.", "thread_id": thread_id}
