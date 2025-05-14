@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (newUserBtn) {
         newUserBtn.addEventListener('click', function() {
             console.log('Botão novo usuário clicado');
-            if (confirm('Iniciar uma nova conversa? O histórico atual será mantido, mas você começará com um novo usuário.')) {
+            if (confirm('Iniciar uma nova conversa? O histórico atual será mantido no servidor, mas você começará com um novo usuário.')) {
                 startNewConversation();
             }
         });
@@ -277,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('Erro na resposta do servidor');
+                throw new Error(`Erro na resposta do servidor: ${response.status}`);
             }
             return response.json();
         })
@@ -292,24 +292,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Limpar chat e adicionar mensagem inicial
                 chatContainer.innerHTML = '';
                 userName = 'Usuário Anônimo';
-                addSystemMessage('Olá! Por favor, me diga seu nome para começarmos nossa conversa.');
+                addSystemMessage(data.message || 'Nova sessão iniciada! Qual é o seu nome?');
                 
                 // Reabilitar input e botão
                 userInput.disabled = false;
                 sendBtn.disabled = false;
-                
-                // Enviar mensagem automática para o backend
-                fetch('/send_message', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: "Olá! Sou seu assistente virtual. Por favor, me diga seu nome para que eu possa te atender melhor.",
-                        thread_id: data.thread_id,
-                        chatbot_type: chatbotType
-                    }),
-                });
             } else {
                 throw new Error(data.error || 'Erro desconhecido ao criar novo usuário');
             }
@@ -317,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(error => {
             console.error('Erro ao criar novo usuário:', error);
             removeElement(loadingId);
-            addSystemMessage('Erro ao iniciar nova conversa: ' + error.message);
+            addSystemMessage(`Erro ao iniciar nova conversa: ${error.message}`);
         });
     }
 });

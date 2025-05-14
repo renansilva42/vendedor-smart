@@ -1,8 +1,8 @@
 from typing import Dict, Type, Any
-from .base_new import BaseChatbot
-from .vendas_new import VendasChatbot
-from .treinamento_new import TreinamentoChatbot
-from .whatsapp_new import WhatsAppChatbot
+from .base import BaseChatbot
+from .vendas import VendasChatbot
+from .treinamento import TreinamentoChatbot
+from .whatsapp import WhatsAppChatbot
 from ..services.container import ServiceContainer, get_container
 from ..services.interfaces import (
     AIServiceInterface,

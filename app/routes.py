@@ -42,7 +42,6 @@ def check_session_expiry():
     if 'user_id' in session:
         session['last_activity'] = datetime.datetime.now().isoformat()
 
-
 @main.route('/')
 def index():
     """Rota principal que exibe a página de login ou redireciona para seleção de chatbot."""
@@ -90,8 +89,6 @@ def login():
     except Exception as e:
         logger.error(f"Erro no login: {str(e)}", exc_info=True)
         return jsonify({'success': False, 'message': f'Erro no servidor: {str(e)}'})
-
-
 
 @main.route('/logout')
 def logout():
@@ -268,11 +265,10 @@ def send_message():
         logger.error(f"Erro ao enviar mensagem: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-
 @main.route('/new_user', methods=['POST'])
 @login_required
 def new_user():
-    """Cria uma nova thread de chatbot para o usuário logado."""
+    """Cria uma nova thread de chatbot para o usuário logado, reiniciando a sessão."""
     try:
         # Validar se a requisição é JSON
         if not request.is_json:
@@ -280,14 +276,10 @@ def new_user():
             return jsonify({'error': 'Requisição deve ser JSON'}), 400
 
         data = request.json
-        chatbot_type = data.get('chatbot_type')
+        chatbot_type = data.get('chatbot_type', 'atual')  # Default to 'atual' if not specified
         
         # Validar tipo de chatbot
-        if not chatbot_type:
-            logger.warning("Tipo de chatbot não especificado na requisição")
-            return jsonify({'error': 'Tipo de chatbot não especificado'}), 400
-            
-        if chatbot_type not in ['atual', 'novo', 'vendas']:
+        if chatbot_type not in ChatbotFactory.get_available_types():
             logger.error(f"Tipo de chatbot inválido: {chatbot_type}")
             return jsonify({'error': 'Tipo de chatbot inválido'}), 400
         
@@ -295,6 +287,12 @@ def new_user():
         if not user_id:
             logger.error("ID do usuário não encontrado na sessão")
             return jsonify({'error': 'Sessão inválida'}), 401
+        
+        # Verificar se o usuário existe
+        user = User.get_by_id(user_id)
+        if not user:
+            logger.error(f"Usuário não encontrado: {user_id}")
+            return jsonify({'error': 'Usuário não encontrado'}), 404
         
         # Criar chatbot e nova thread
         chatbot = ChatbotFactory.create_chatbot(chatbot_type)
@@ -310,21 +308,30 @@ def new_user():
         # Atualizar thread_id do usuário
         update_success = False
         if chatbot_type == 'atual':
-            result = User.update_thread_id_atual(user_id, thread_id)
+            update_success = User.update_thread_id_atual(user_id, thread_id)
         elif chatbot_type == 'novo':
-            result = User.update_thread_id_novo(user_id, thread_id)
+            update_success = User.update_thread_id_novo(user_id, thread_id)
         elif chatbot_type == 'vendas':
-            # Assuming there is a method to update vendas thread_id, else fallback to novo
+            # Check if update_thread_id_vendas exists, else fallback to update_thread_id_novo
             if hasattr(User, 'update_thread_id_vendas'):
-                result = User.update_thread_id_vendas(user_id, thread_id)
+                update_success = User.update_thread_id_vendas(user_id, thread_id)
             else:
-                result = User.update_thread_id_novo(user_id, thread_id)
-        else:
-            result = False
-
-        if not result:
+                update_success = User.update_thread_id_novo(user_id, thread_id)
+        
+        if not update_success:
             logger.error(f"Falha ao atualizar thread_id do usuário: {user_id}")
             return jsonify({'error': 'Erro ao atualizar thread_id'}), 500
+        
+        # Resetar nome do usuário para vazio para prompting de reintrodução
+        if User.update_name(user_id, ''):
+            logger.info(f"Nome do usuário {user_id} resetado para vazio na nova thread")
+            # Atualizar mensagens existentes para refletir o nome vazio
+            Message.update_user_name(thread_id, user_id, '')
+        else:
+            logger.warning(f"Falha ao resetar nome do usuário {user_id}")
+        
+        # Atualizar última interação
+        User.update_last_interaction(user_id, chatbot_type)
         
         # Registrar criação bem-sucedida
         logger.info(f"Nova thread criada para usuário {user_id}, tipo {chatbot_type}: {thread_id}")
@@ -333,12 +340,13 @@ def new_user():
             'success': True,
             'user_id': user_id,
             'thread_id': thread_id,
-            'chatbot_type': chatbot_type
+            'chatbot_type': chatbot_type,
+            'message': 'Nova sessão iniciada com sucesso'
         })
         
     except Exception as e:
         logger.error(f"Erro ao processar requisição de nova thread: {str(e)}", exc_info=True)
-        return jsonify({'error': 'Erro ao processar requisição'}), 500
+        return jsonify({'error': str(e)}), 500
 
 @main.route('/get_chat_history')
 @login_required

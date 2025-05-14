@@ -68,6 +68,18 @@ class Auth:
 
 class User:
     @staticmethod
+    def get_by_id(user_id: str) -> Optional[Dict]:
+        """Obtém um usuário pelo ID."""
+        try:
+            response = supabase.table('usuarios_chatbot').select('*').eq('id', user_id).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            logger.error(f"Erro ao obter usuário por ID: {str(e)}")
+            return None
+
+    @staticmethod
     def create(user_id: str, name: str = None, email: str = None, login_count: int = 1) -> Optional[Dict]:
         logger.info(f"Criando usuário: {user_id}, nome: {name}, email: {email}, login_count: {login_count}")
         current_time = datetime.datetime.now(TIMEZONE).isoformat()
