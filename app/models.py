@@ -336,6 +336,17 @@ class Message:
             return None
 
     @staticmethod
+    def clear_thread_history(thread_id: str) -> bool:
+        """Limpa o histórico de mensagens de um thread específico."""
+        try:
+            response = supabase.table('mensagens_chatbot').delete().eq('thread_id', thread_id).execute()
+            logger.info(f"Histórico de mensagens limpo para thread_id={thread_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao limpar histórico: {str(e)}")
+            return False
+
+    @staticmethod
     def get_messages(thread_id: str, chatbot_type: str = None) -> List[Dict]:
         """Recupera mensagens com base no thread_id e chatbot_type."""
         try:

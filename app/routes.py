@@ -146,121 +146,64 @@ def chat(chatbot_type: str):
 @main.route('/send_message', methods=['POST'])
 @login_required
 def send_message():
-    """Envia uma mensagem para o chatbot e retorna a resposta."""
     try:
-        # Validar se a requisição é JSON
         if not request.is_json:
-            logger.warning("Requisição não contém JSON válido")
             return jsonify({'error': 'Requisição deve ser JSON'}), 400
 
         data = request.json
         message = data.get('message', '').strip()
-        thread_id = data.get('thread_id')
-        chatbot_type = data.get('chatbot_type')
+        chatbot_type = data.get('chatbot_type', 'atual')
         
-        # Validação mais robusta dos dados
-        if not all([message, thread_id, chatbot_type]):
-            missing_fields = [field for field, value in {
-                'message': message,
-                'thread_id': thread_id,
-                'chatbot_type': chatbot_type
-            }.items() if not value]
-            logger.warning(f"Campos obrigatórios ausentes: {missing_fields}")
-            return jsonify({'error': f'Campos obrigatórios ausentes: {missing_fields}'}), 400
-        
-        user_id = session.get('user_id')
-        logger.info(f"User ID from session: {user_id}")
-        if not user_id:
-            logger.error("ID do usuário não encontrado na sessão")
-            return jsonify({'error': 'Sessão inválida'}), 401
+        if not message:
+            return jsonify({'error': 'Mensagem não pode estar vazia'}), 400
 
-        # Verificar se o usuário existe no banco de dados
-        user_check = User.get_name(user_id)
-        logger.info(f"User name from DB: {user_check}")
-        # Accept "Usuário Anônimo" as valid user name
-        if user_check == "Nenhum nome encontrado":
-            logger.error(f"Usuário com ID {user_id} não existe no banco de dados. Limpando sessão.")
-            session.clear()
-            return jsonify({'error': 'Usuário inválido ou não encontrado. Sessão encerrada, por favor faça login novamente.'}), 401
+        user_id = session.get('user_id')
+        user = User.get_by_id(user_id)
         
-        user_name = user_check
-        
-        # Criar chatbot com validação de tipo
-        if chatbot_type not in ChatbotFactory.get_available_types():
-            logger.error(f"Tipo de chatbot inválido: {chatbot_type}")
-            return jsonify({'error': 'Tipo de chatbot inválido'}), 400
-            
-        chatbot = ChatbotFactory.create_chatbot(chatbot_type)
-        if not chatbot:
-            logger.error(f"Falha ao criar chatbot do tipo: {chatbot_type}")
-            return jsonify({'error': 'Erro ao criar chatbot'}), 500
-        
+        if not user:
+            return jsonify({'error': 'Usuário não encontrado'}), 404
+
+        # Criar nova thread se não existir
+        thread_id = User.get_thread_id(user_id, chatbot_type)
+        if not thread_id:
+            chatbot = ChatbotFactory.create_chatbot(chatbot_type)
+            thread_id = chatbot.create_thread()
+            User.update_thread_id(user_id, thread_id, chatbot_type)
+
         # Registrar mensagem do usuário
-        user_message = Message.create(
+        Message.create(
             thread_id=thread_id,
-            role='user',
+            role="user",
             content=message,
             user_id=user_id,
             chatbot_type=chatbot_type,
-            user_name=user_name
+            user_name=User.get_name(user_id)
         )
-        
-        if not user_message:
-            logger.error("Falha ao registrar mensagem do usuário")
-            return jsonify({'error': 'Erro ao registrar mensagem'}), 500
-        
-        # Enviar mensagem e obter resposta
-        try:
-            response_data = chatbot.send_message(thread_id, message, user_name)
-            
-            # Garantir que a resposta seja serializável
-            if hasattr(response_data, '__dict__'):
-                response_data = {
-                    'content': response_data.content if hasattr(response_data, 'content') else str(response_data),
-                    'thread_id': thread_id,
-                    'user_name': user_name
-                }
-            
-            # Registrar resposta do chatbot
+
+        # Obter resposta do chatbot
+        chatbot = ChatbotFactory.create_chatbot(chatbot_type)
+        response = chatbot.send_message(thread_id, message)
+
+        # Registrar resposta do assistente
+        if response and 'response' in response:
             Message.create(
                 thread_id=thread_id,
-                role='assistant',
-                content=response_data.get('content', ''),
+                role="assistant",
+                content=response['response'],
                 user_id=user_id,
-                chatbot_type=chatbot_type,
-                user_name='Assistente'
+                chatbot_type=chatbot_type
             )
-        except Exception as e:
-            logger.error(f"Erro ao processar resposta do chatbot: {str(e)}", exc_info=True)
-            return jsonify({'error': 'Erro ao processar resposta'}), 500
-        
-        # Processar extração de nome
-        try:
-            extracted_name = chatbot.extract_name(message)
-            if (extracted_name and 
-                extracted_name != user_name and 
-                len(extracted_name) > 2 and 
-                extracted_name != "Usuário Anônimo"):
-                
-                # Atualizar nome do usuário
-                if User.update_name(user_id, extracted_name):
-                    # Atualizar nome nas mensagens anteriores
-                    Message.update_user_name(thread_id, user_id, extracted_name)
-                    logger.info(f"Nome do usuário atualizado: {user_id} -> {extracted_name}")
-                    response_data['user_name'] = extracted_name
-        except Exception as e:
-            logger.warning(f"Erro ao processar extração de nome: {str(e)}")
-            # Não interromper o fluxo por erro na extração de nome
-        
+
         # Atualizar última interação
-        try:
-            User.update_last_interaction(user_id, chatbot_type)
-        except Exception as e:
-            logger.warning(f"Erro ao atualizar última interação: {str(e)}")
-            # Não interromper o fluxo por erro na atualização
-        
+        User.update_last_interaction(user_id, chatbot_type)
+
+        response_data = {
+            'response': response.get('response', ''),
+            'thread_id': thread_id
+        }
+
         return jsonify(response_data)
-        
+
     except Exception as e:
         logger.error(f"Erro ao enviar mensagem: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500

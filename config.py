@@ -47,6 +47,10 @@ class Config:
     
     # Configurações de timeout
     REQUEST_TIMEOUT = int(os.getenv('REQUEST_TIMEOUT', '30'))
+
+    # Configurações de limite de histórico
+    MAX_HISTORY_MESSAGES = 10
+    CLEAR_HISTORY_ON_RESTART = True
     
     @classmethod
     def validate_config(cls):

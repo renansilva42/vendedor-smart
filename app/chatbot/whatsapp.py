@@ -20,6 +20,30 @@ class WhatsAppChatbot(BaseChatbot):
         )
         # Cache para armazenar nomes extraídos
         self._name_cache = {}
+        self.max_history = Config.MAX_HISTORY_MESSAGES  # Limite de mensagens no histórico
+    
+    def get_messages(self, thread_id: str) -> List[Dict]:
+        """Obtém apenas as últimas N mensagens do histórico."""
+        messages = Message.get_messages(thread_id)
+        return messages[-self.max_history:] if messages else []
+
+    def send_message(self, thread_id: str, message: str) -> Dict:
+        """Envia mensagem mantendo histórico limitado."""
+        messages = self.get_messages(thread_id)
+        if len(messages) >= self.max_history:
+            # Remove mensagens antigas se exceder o limite
+            Message.clear_thread_history(thread_id)
+            # Mantém apenas as últimas mensagens
+            for msg in messages[-self.max_history:]:
+                Message.create(
+                    thread_id=thread_id,
+                    role=msg['role'],
+                    content=msg['content'],
+                    user_id=msg.get('user_id'),
+                    chatbot_type='whatsapp'
+                )
+        
+        return super().send_message(thread_id, message)
     
     def get_instructions(self) -> str:
         return (
