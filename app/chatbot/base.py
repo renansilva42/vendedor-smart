@@ -177,6 +177,122 @@ class BaseChatbot:
                 "error": str(e)
             }
 
+    def _get_latest_message(self, thread_id: str, run_id: str = None) -> Dict[str, Any]:
+        """
+        Busca apenas a mensagem mais recente criada pelo run atual.
+        
+        Args:
+            thread_id: ID da thread
+            run_id: ID do run que criou a mensagem (opcional)
+            
+        Returns:
+            Conteúdo da mensagem mais recente
+        """
+        try:
+            # Buscar apenas a primeira mensagem (a mais recente)
+            response = client.beta.threads.messages.list(
+                thread_id=thread_id,
+                limit=1,
+                order="desc"
+            )
+            
+            if not response.data:
+                logger.warning(f"Nenhuma mensagem encontrada na thread {thread_id}")
+                return {"response": "Não foi possível obter uma resposta.", "thread_id": thread_id}
+            
+            latest_message = response.data[0]
+            
+            # Verificar se a mensagem é do assistente
+            if latest_message.role != "assistant":
+                logger.warning(f"Última mensagem não é do assistente na thread {thread_id}")
+                return {"response": "Última mensagem não é do assistente.", "thread_id": thread_id}
+            
+            # Extrair conteúdo
+            message_content = ""
+            for content_item in latest_message.content:
+                if content_item.type == 'text':
+                    message_content = content_item.text.value
+                    break
+            
+            logger.info(f"Última mensagem obtida: {message_content[:100]}...")
+            
+            return {
+                "response": message_content,
+                "thread_id": thread_id,
+                "message_id": latest_message.id
+            }
+        except Exception as e:
+            logger.error(f"Erro ao obter última mensagem: {str(e)}", exc_info=True)
+            return {
+                "response": "Erro ao buscar resposta mais recente.",
+                "thread_id": thread_id,
+                "error": str(e)
+            }
+    
+    def _format_response(self, messages, thread_id: str) -> Dict[str, Any]:
+        """
+        Formata a resposta do assistente obtendo APENAS o conteúdo da mensagem mais recente.
+        
+        Args:
+            messages: Lista de mensagens da thread retornada pela API OpenAI
+            thread_id: ID da thread atual
+            
+        Returns:
+            Dicionário contendo a resposta formatada
+        """
+        try:
+            # Filtrar apenas mensagens do assistente
+            assistant_messages = [msg for msg in messages.data if msg.role == "assistant"]
+            
+            if not assistant_messages:
+                logger.warning(f"Nenhuma mensagem do assistente encontrada na thread {thread_id}")
+                return {"response": "Não foi possível obter uma resposta.", "thread_id": thread_id}
+            
+            # Ordenar por created_at em ordem decrescente (mais recente primeiro)
+            # Isso garante que mesmo se a API retornar em ordem diferente, pegamos a mais recente
+            assistant_messages.sort(key=lambda msg: msg.created_at, reverse=True)
+            
+            # Pegar apenas a mensagem mais recente
+            latest_message = assistant_messages[0]
+            
+            # Log detalhado para depuração
+            message_id = latest_message.id
+            created_at = latest_message.created_at
+            logger.info(f"Processando mensagem: ID={message_id}, created_at={created_at}")
+            
+            # Extrair o conteúdo da mensagem
+            message_content = ""
+            
+            # Verificar se há conteúdo na mensagem e se ele está acessível como esperado
+            if hasattr(latest_message, 'content') and latest_message.content:
+                # Tratar diferentes estruturas de conteúdo
+                for content_item in latest_message.content:
+                    if hasattr(content_item, 'type') and content_item.type == 'text':
+                        if hasattr(content_item, 'text') and hasattr(content_item.text, 'value'):
+                            message_content += content_item.text.value
+                            # Sair depois de obter o primeiro item de texto para evitar concatenação
+                            break
+            
+            # Verificar se o conteúdo está vazio
+            if not message_content.strip():
+                logger.warning(f"Conteúdo da mensagem vazio para mensagem {message_id}")
+                return {"response": "Não foi possível extrair o conteúdo da resposta.", "thread_id": thread_id}
+            
+            logger.info(f"Mensagem formatada: ID={message_id}, content_preview={message_content[:50]}...")
+            
+            return {
+                "response": message_content,
+                "thread_id": thread_id,
+                "message_id": message_id
+            }
+        except Exception as e:
+            logger.error(f"Erro ao formatar resposta: {str(e)}", exc_info=True)
+            return {
+                "response": "Ocorreu um erro ao processar a resposta.",
+                "thread_id": thread_id,
+                "error": str(e)
+            }
+    
     def _process_run(self, thread_id: str, run_id: str) -> Dict[str, Any]:
         max_attempts = 60  # Increased to allow more time for action handling
         attempts = 0
@@ -187,8 +303,8 @@ class BaseChatbot:
                     run_id=run_id
                 )
                 if run_status.status == 'completed':
-                    messages = client.beta.threads.messages.list(thread_id=thread_id)
-                    return self._format_response(messages, thread_id)
+                    # Usar o novo método para obter apenas a mensagem mais recente
+                    return self._get_latest_message(thread_id, run_id)
                 elif run_status.status == 'failed':
                     error_msg = getattr(run_status, 'last_error', {'message': 'Erro desconhecido'}).message
                     logger.error(f"Run falhou: {error_msg}")
