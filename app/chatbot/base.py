@@ -189,6 +189,11 @@ class BaseChatbot:
             Conteúdo da mensagem mais recente
         """
         try:
+            # Tentar obter o nome do usuário se a classe tiver o método
+            user_name = "Usuário"
+            if hasattr(self, 'get_user_name'):
+                user_name = self.get_user_name(thread_id)
+            
             # Buscar apenas a primeira mensagem (a mais recente)
             response = client.beta.threads.messages.list(
                 thread_id=thread_id,
@@ -198,14 +203,14 @@ class BaseChatbot:
             
             if not response.data:
                 logger.warning(f"Nenhuma mensagem encontrada na thread {thread_id}")
-                return {"response": "Não foi possível obter uma resposta.", "thread_id": thread_id}
+                return {"response": "Não foi possível obter uma resposta.", "thread_id": thread_id, "user_name": user_name}
             
             latest_message = response.data[0]
             
             # Verificar se a mensagem é do assistente
             if latest_message.role != "assistant":
                 logger.warning(f"Última mensagem não é do assistente na thread {thread_id}")
-                return {"response": "Última mensagem não é do assistente.", "thread_id": thread_id}
+                return {"response": "Última mensagem não é do assistente.", "thread_id": thread_id, "user_name": user_name}
             
             # Extrair conteúdo
             message_content = ""
@@ -219,14 +224,16 @@ class BaseChatbot:
             return {
                 "response": message_content,
                 "thread_id": thread_id,
-                "message_id": latest_message.id
+                "message_id": latest_message.id,
+                "user_name": user_name
             }
         except Exception as e:
             logger.error(f"Erro ao obter última mensagem: {str(e)}", exc_info=True)
             return {
                 "response": "Erro ao buscar resposta mais recente.",
                 "thread_id": thread_id,
-                "error": str(e)
+                "error": str(e),
+                "user_name": "Usuário"
             }
     
     def _format_response(self, messages, thread_id: str) -> Dict[str, Any]:
