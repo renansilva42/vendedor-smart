@@ -1,5 +1,5 @@
 # app/chatbot/treinamento.py
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import logging
 from .base import BaseChatbot
 from config import Config
@@ -11,7 +11,7 @@ class TreinamentoChatbot(BaseChatbot):
     
     def __init__(self):
         super().__init__(
-            name="Simulador de Vendas",
+            name="Treinamento de Vendas",
             model="gpt-4o",
             assistant_id=Config.ASSISTANT_ID_TREINAMENTO
         )
@@ -46,6 +46,20 @@ class TreinamentoChatbot(BaseChatbot):
                         "required": ["thread_id", "role", "content", "timestamp", "user_name"]
                     }
                 }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "extract_user_name",
+                    "description": "Extrai o nome do usuário da mensagem quando ele se apresenta",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "user_name": {"type": "string", "description": "Nome do usuário extraído da mensagem"}
+                        },
+                        "required": ["user_name"]
+                    }
+                }
             }
         ]
     
@@ -53,5 +67,41 @@ class TreinamentoChatbot(BaseChatbot):
         """Executa funções específicas do chatbot de treinamento."""
         if function_name == "log_interaction":
             return "Log registrado com sucesso"
+        elif function_name == "extract_user_name":
+            return "Nome do usuário extraído com sucesso"
         else:
             return f"Função {function_name} não implementada"
+            
+    def send_message(self, thread_id: str, message: str) -> Dict[str, Any]:
+        """
+        Envia uma mensagem para o assistente e retorna a resposta.
+        Implementação expandida para corresponder à funcionalidade do IA Especialista em Vendas.
+        """
+        try:
+            response = super().send_message(thread_id, message)
+            
+            # Se o retorno contém tool_calls, processa-os
+            if 'tool_calls' in response and response['tool_calls']:
+                for tool_call in response['tool_calls']:
+                    if tool_call.get('function', {}).get('name') == 'extract_user_name':
+                        # Extrair o nome do usuário se fornecido na ferramenta
+                        try:
+                            user_name = tool_call.get('function', {}).get('arguments', {}).get('user_name', '')
+                            if user_name and user_name != "Usuário Anônimo":
+                                # Incluir o nome extraído na resposta para atualizações posteriores
+                                response['user_name'] = user_name
+                        except Exception as e:
+                            logger.error(f"Erro ao extrair nome do usuário: {str(e)}")
+            
+            # Garantir que todas as respostas do chatbot de treinamento tenham o nome "Treinamento de Vendas"
+            if 'response' in response:
+                return {
+                    'response': response['response'],
+                    'user_name': response.get('user_name', ''),
+                    'assistant_name': 'Treinamento de Vendas'
+                }
+            
+            return response
+        except Exception as e:
+            logger.error(f"Erro ao enviar mensagem para o chatbot de treinamento: {str(e)}")
+            return {'error': str(e)}

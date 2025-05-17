@@ -196,15 +196,21 @@ def send_message():
             if updated:
                 logger.info(f"Nome do usuário atualizado para: {response['user_name']}")
 
-        # Registrar resposta do assistente com nome fixo "IA Especialista em Vendas"
+        # Registrar resposta do assistente com nome específico baseado no tipo do chatbot
         if response and 'response' in response:
+            assistant_name = "IA Especialista em Vendas"  # Nome padrão
+            
+            # Usar nome específico para cada tipo de chatbot
+            if chatbot_type == 'treinamento':
+                assistant_name = "Treinamento de Vendas"
+            
             Message.create(
                 thread_id=thread_id,
                 role="assistant",
                 content=response['response'],
                 user_id=user_id,
                 chatbot_type=chatbot_type,
-                user_name="IA Especialista em Vendas"  # Nome fixo para o assistente
+                user_name=assistant_name
             )
 
         # Atualizar última interação
@@ -278,6 +284,12 @@ def new_user():
             # Check if update_thread_id_vendas exists, else fallback to update_thread_id_novo
             if hasattr(User, 'update_thread_id_vendas'):
                 update_success = User.update_thread_id_vendas(user_id, thread_id)
+            else:
+                update_success = User.update_thread_id_novo(user_id, thread_id)
+        elif chatbot_type == 'treinamento':
+            # Check if update_thread_id_treinamento exists, else fallback to update_thread_id_novo
+            if hasattr(User, 'update_thread_id_treinamento'):
+                update_success = User.update_thread_id_treinamento(user_id, thread_id)
             else:
                 update_success = User.update_thread_id_novo(user_id, thread_id)
         

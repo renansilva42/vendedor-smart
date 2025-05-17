@@ -98,7 +98,8 @@ class User:
                 'last_interaction': current_time,
                 'login_count': login_count,
                 'thread_id_atual': None,
-                'thread_id_novo': None
+                'thread_id_novo': None,
+                'thread_id_treinamento': None
             }
             response = supabase.table('usuarios_chatbot').insert(user_data).execute()
             if response.data:
@@ -155,6 +156,11 @@ class User:
     @staticmethod
     def update_thread_id_novo(user_id: str, thread_id: str) -> bool:
         return User.update_thread_id(user_id, thread_id, 'novo')
+        
+    @staticmethod
+    def update_thread_id_treinamento(user_id: str, thread_id: str) -> bool:
+        """Updates the thread_id for the treinamento chatbot type."""
+        return User.update_thread_id(user_id, thread_id, 'treinamento')
 
     @staticmethod
     def update_last_interaction(user_id: str, chatbot_type: str) -> bool:

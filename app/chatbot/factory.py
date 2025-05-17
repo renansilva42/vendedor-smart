@@ -21,9 +21,14 @@ class ChatbotRegistry:
     
     def _initialize_registry(self) -> None:
         """Initialize the default chatbot registry."""
+        self.register_chatbots()
+    
+    def register_chatbots(self) -> None:
+        """Register all available chatbot types."""
         self.register_chatbot("vendas", VendasChatbot)
         self.register_chatbot("treinamento", TreinamentoChatbot)
         self.register_chatbot("whatsapp", WhatsAppChatbot)
+        # Register other chatbot types as needed
     
     def register_chatbot(self, name: str, chatbot_class: Type[BaseChatbot]) -> None:
         """Register a new chatbot type."""
