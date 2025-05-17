@@ -170,28 +170,41 @@ def send_message():
             thread_id = chatbot.create_thread()
             User.update_thread_id(user_id, thread_id, chatbot_type)
 
-        # Registrar mensagem do usuário
+        # Obter o nome do usuário - primeiro da tabela de usuários
+        # Use o nome armazenado em users mesmo que vazio, pois o chatbot vai pedir na primeira interação
+        user_name = user.get('name', '') if user else ''
+
+        # Registrar mensagem do usuário com o nome atual (mesmo que vazio)
         Message.create(
             thread_id=thread_id,
             role="user",
             content=message,
             user_id=user_id,
             chatbot_type=chatbot_type,
-            user_name=User.get_name(user_id)
+            user_name=user_name
         )
 
         # Obter resposta do chatbot
         chatbot = ChatbotFactory.create_chatbot(chatbot_type)
         response = chatbot.send_message(thread_id, message)
 
-        # Registrar resposta do assistente
+        # Se o chatbot extraiu um nome da mensagem e esse nome não está no banco de dados
+        # Vamos atualizar o nome do usuário
+        if response and 'user_name' in response and response['user_name'] != user_name and response['user_name'] != "Usuário Anônimo":
+            # Atualizar o nome no banco de dados
+            updated = User.update_name(user_id, response['user_name'])
+            if updated:
+                logger.info(f"Nome do usuário atualizado para: {response['user_name']}")
+
+        # Registrar resposta do assistente com nome fixo "IA Especialista em Vendas"
         if response and 'response' in response:
             Message.create(
                 thread_id=thread_id,
                 role="assistant",
                 content=response['response'],
                 user_id=user_id,
-                chatbot_type=chatbot_type
+                chatbot_type=chatbot_type,
+                user_name="IA Especialista em Vendas"  # Nome fixo para o assistente
             )
 
         # Atualizar última interação

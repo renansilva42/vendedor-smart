@@ -345,7 +345,7 @@ class VendasChatbot(BaseChatbot):
         
     def get_user_name(self, thread_id: str) -> str:
         """
-        Recupera o nome do usuário do banco de dados ou cache.
+        Recupera o nome do usuário do cache ou das mensagens.
         
         Args:
             thread_id: ID da thread
@@ -358,22 +358,17 @@ class VendasChatbot(BaseChatbot):
             return self._name_cache[thread_id]
         
         try:
-            # Buscar primeiro na tabela de perfis (mais confiável)
-            result = supabase.table("perfis_usuario").select("user_name").eq("thread_id", thread_id).execute()
-            if result.data and len(result.data) > 0 and result.data[0].get("user_name"):
-                user_name = result.data[0].get("user_name")
-                # Armazenar em cache
-                self._name_cache[thread_id] = user_name
-                return user_name
-                
-            # Se não encontrar, buscar nas mensagens
-            result = supabase.table("mensagens_chatbot").select("user_name").eq("thread_id", thread_id).limit(1).execute()
-            if result.data and len(result.data) > 0 and result.data[0].get("user_name"):
-                user_name = result.data[0].get("user_name")
-                if user_name != "Usuário Anônimo":
-                    # Armazenar em cache
-                    self._name_cache[thread_id] = user_name
-                    return user_name
+            # Buscar nas mensagens
+            result = supabase.table("mensagens_chatbot").select("user_name").eq("thread_id", thread_id).eq("role", "user").order('timestamp', desc=True).limit(10).execute()
+            
+            if result.data:
+                for msg in result.data:
+                    user_name = msg.get("user_name")
+                    if user_name and user_name != "Usuário Anônimo" and user_name.strip():
+                        # Armazenar em cache
+                        self._name_cache[thread_id] = user_name
+                        logger.info(f"Nome do usuário recuperado das mensagens: {user_name}")
+                        return user_name
         except Exception as e:
             logger.error(f"Erro ao recuperar nome do usuário: {str(e)}", exc_info=True)
         
@@ -403,33 +398,13 @@ class VendasChatbot(BaseChatbot):
                 
             logger.info(f"Salvando nome do usuário na tabela mensagens_chatbot: {user_name}")
             
-            # Atualizar todas as mensagens para este thread
+            # Atualizar mensagens do usuário neste thread
             result = supabase.table("mensagens_chatbot").update(
                 {"user_name": user_name}
-            ).eq("thread_id", thread_id).execute()
+            ).eq("thread_id", thread_id).eq("role", "user").execute()
             
             affected_rows = len(result.data) if hasattr(result, 'data') else 0
             logger.info(f"Nome do usuário salvo com sucesso. Registros atualizados: {affected_rows}")
-            
-            # Armazenar também na tabela de perfis de usuário para persistência
-            try:
-                # Verificar se já existe um perfil para este thread
-                profile_check = supabase.table("perfis_usuario").select("*").eq("thread_id", thread_id).execute()
-                
-                if profile_check.data and len(profile_check.data) > 0:
-                    # Atualizar perfil existente
-                    supabase.table("perfis_usuario").update(
-                        {"user_name": user_name, "updated_at": datetime.now().isoformat()}
-                    ).eq("thread_id", thread_id).execute()
-                else:
-                    # Criar novo perfil
-                    supabase.table("perfis_usuario").insert(
-                        {"thread_id": thread_id, "user_name": user_name, "created_at": datetime.now().isoformat()}
-                    ).execute()
-                    
-                logger.info(f"Perfil do usuário atualizado com o nome: {user_name}")
-            except Exception as e:
-                logger.error(f"Erro ao atualizar perfil do usuário: {str(e)}", exc_info=True)
                 
         except Exception as e:
             logger.error(f"Erro ao salvar nome do usuário no Supabase: {str(e)}", exc_info=True)

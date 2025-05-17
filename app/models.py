@@ -319,6 +319,23 @@ class Message:
                     logger.error(f"Falha ao criar mensagem: user_id {user_id} não existe na tabela usuarios_chatbot")
                     return None
 
+            # Define valores corretos para user_name baseado no role
+            if role == "assistant":
+                # Mensagens do assistente sempre têm o nome fixo
+                user_name = "IA Especialista em Vendas"
+            elif role == "user" and user_id and (user_name is None or user_name.strip() == ""):
+                # Se user_name não informado para usuário, tenta buscar do banco
+                try:
+                    response = supabase.table('usuarios_chatbot').select('name').eq('id', user_id).execute()
+                    if response.data and response.data[0]['name'] and response.data[0]['name'].strip():
+                        user_name = response.data[0]['name']
+                    else:
+                        # Se não encontrou ou está vazio, deixa como Usuário Anônimo
+                        user_name = "Usuário Anônimo"
+                except Exception as e:
+                    logger.error(f"Erro ao obter nome do usuário para mensagem: {e}")
+                    user_name = "Usuário Anônimo"
+
             message_data = {
                 'thread_id': thread_id,
                 'role': role,
