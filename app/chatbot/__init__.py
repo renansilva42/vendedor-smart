@@ -18,6 +18,7 @@ class ChatbotFactory:
     _chatbot_types: Dict[str, Type[BaseChatbot]] = {
         'atual': VendasChatbot,
         'novo': TreinamentoChatbot,
+        'treinamento': TreinamentoChatbot,
         'whatsapp': WhatsAppChatbot
     }
     
@@ -30,7 +31,7 @@ class ChatbotFactory:
         Cria ou recupera uma instância de chatbot com base no tipo.
         
         Args:
-            chatbot_type: O tipo de chatbot a ser criado ('atual', 'novo', 'whatsapp')
+            chatbot_type: O tipo de chatbot a ser criado ('atual', 'novo', 'treinamento', 'whatsapp')
             
         Returns:
             Uma instância de chatbot ou None se o tipo for inválido
@@ -43,13 +44,24 @@ class ChatbotFactory:
         # Verificar se já existe uma instância no cache
         if chatbot_type in cls._instances:
             logger.info(f"Retornando instância existente de {chatbot_type}")
-            return cls._instances[chatbot_type]
+            instance = cls._instances[chatbot_type]
+            
+            # Garantir que o nome esteja correto para o tipo 'novo' e 'treinamento'
+            if chatbot_type in ['novo', 'treinamento']:
+                instance.name = "IA Treinamento de Vendas"
+                
+            return instance
             
         # Criar nova instância
         try:
             logger.info(f"Criando nova instância de chatbot: {chatbot_type}")
             chatbot_class = cls._chatbot_types[chatbot_type]
             instance = chatbot_class()
+            
+            # Garantir que os tipos 'novo' e 'treinamento' usem o nome correto
+            if chatbot_type in ['novo', 'treinamento']:
+                instance.name = "IA Treinamento de Vendas"
+                logger.info(f"Configurado nome 'IA Treinamento de Vendas' para chatbot tipo '{chatbot_type}'")
             
             # Armazenar no cache
             cls._instances[chatbot_type] = instance

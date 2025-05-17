@@ -130,8 +130,13 @@ def chat(chatbot_type: str):
             # Atualizar thread_id do usuário
             if chatbot_type == 'atual':
                 User.update_thread_id_atual(user_id, thread_id)
-            else:
+            elif chatbot_type == 'novo':
                 User.update_thread_id_novo(user_id, thread_id)
+            elif chatbot_type == 'treinamento':
+                User.update_thread_id_treinamento(user_id, thread_id)
+            else:
+                # Fallback genérico
+                User.update_thread_id(user_id, thread_id, chatbot_type)
                 
             logger.info(f"Nova thread criada para usuário {user_id}, tipo {chatbot_type}: {thread_id}")
         except Exception as e:
@@ -201,8 +206,8 @@ def send_message():
             assistant_name = "IA Especialista em Vendas"  # Nome padrão
             
             # Usar nome específico para cada tipo de chatbot
-            if chatbot_type == 'treinamento':
-                assistant_name = "Treinamento de Vendas"
+            if chatbot_type == 'treinamento' or chatbot_type == 'novo':
+                assistant_name = "IA Treinamento de Vendas"
             
             Message.create(
                 thread_id=thread_id,
@@ -280,18 +285,17 @@ def new_user():
             update_success = User.update_thread_id_atual(user_id, thread_id)
         elif chatbot_type == 'novo':
             update_success = User.update_thread_id_novo(user_id, thread_id)
+        elif chatbot_type == 'treinamento':
+            update_success = User.update_thread_id_treinamento(user_id, thread_id)
         elif chatbot_type == 'vendas':
             # Check if update_thread_id_vendas exists, else fallback to update_thread_id_novo
             if hasattr(User, 'update_thread_id_vendas'):
                 update_success = User.update_thread_id_vendas(user_id, thread_id)
             else:
                 update_success = User.update_thread_id_novo(user_id, thread_id)
-        elif chatbot_type == 'treinamento':
-            # Check if update_thread_id_treinamento exists, else fallback to update_thread_id_novo
-            if hasattr(User, 'update_thread_id_treinamento'):
-                update_success = User.update_thread_id_treinamento(user_id, thread_id)
-            else:
-                update_success = User.update_thread_id_novo(user_id, thread_id)
+        else:
+            # Fallback genérico para outros tipos de chatbot
+            update_success = User.update_thread_id(user_id, thread_id, chatbot_type)
         
         if not update_success:
             logger.error(f"Falha ao atualizar thread_id do usuário: {user_id}")

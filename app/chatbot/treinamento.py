@@ -11,7 +11,7 @@ class TreinamentoChatbot(BaseChatbot):
     
     def __init__(self):
         super().__init__(
-            name="Treinamento de Vendas",
+            name="IA Treinamento de Vendas",
             model="gpt-4o",
             assistant_id=Config.ASSISTANT_ID_TREINAMENTO
         )
@@ -75,7 +75,6 @@ class TreinamentoChatbot(BaseChatbot):
     def send_message(self, thread_id: str, message: str) -> Dict[str, Any]:
         """
         Envia uma mensagem para o assistente e retorna a resposta.
-        Implementação expandida para corresponder à funcionalidade do IA Especialista em Vendas.
         """
         try:
             response = super().send_message(thread_id, message)
@@ -93,15 +92,17 @@ class TreinamentoChatbot(BaseChatbot):
                         except Exception as e:
                             logger.error(f"Erro ao extrair nome do usuário: {str(e)}")
             
-            # Garantir que todas as respostas do chatbot de treinamento tenham o nome "Treinamento de Vendas"
+            # Garantir que todas as respostas do chatbot de treinamento tenham o nome "IA Treinamento de Vendas"
             if 'response' in response:
                 return {
                     'response': response['response'],
                     'user_name': response.get('user_name', ''),
-                    'assistant_name': 'Treinamento de Vendas'
+                    'assistant_name': 'IA Treinamento de Vendas'
                 }
             
+            # Adicionar assistant_name mesmo quando não há 'response' no retorno
+            response['assistant_name'] = 'IA Treinamento de Vendas'
             return response
         except Exception as e:
             logger.error(f"Erro ao enviar mensagem para o chatbot de treinamento: {str(e)}")
-            return {'error': str(e)}
+            return {'error': str(e), 'assistant_name': 'IA Treinamento de Vendas'}

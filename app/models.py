@@ -325,10 +325,13 @@ class Message:
                     logger.error(f"Falha ao criar mensagem: user_id {user_id} não existe na tabela usuarios_chatbot")
                     return None
 
-            # Define valores corretos para user_name baseado no role
+            # Define valores corretos para user_name baseado no role e chatbot_type
             if role == "assistant":
-                # Mensagens do assistente sempre têm o nome fixo
-                user_name = "IA Especialista em Vendas"
+                # Mensagens do assistente têm nome específico baseado no tipo de chatbot
+                if chatbot_type == 'treinamento' or chatbot_type == 'novo':
+                    user_name = "IA Treinamento de Vendas"
+                else:
+                    user_name = "IA Especialista em Vendas"
             elif role == "user" and user_id and (user_name is None or user_name.strip() == ""):
                 # Se user_name não informado para usuário, tenta buscar do banco
                 try:
@@ -507,7 +510,7 @@ class Message:
             # Usar OpenAI para gerar feedback
             messages = response.data
             
-            # Preparar prompt para a API
+        # Preparar prompt para a API
             prompt = "Com base nas seguintes mensagens de um vendedor, forneça um feedback construtivo sobre suas habilidades de comunicação e vendas:\n\n"
             
             for msg in messages:
