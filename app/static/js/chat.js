@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Variáveis globais
     let isProcessing = false;
-    let userName = 'Usuário';
+    let userName = 'Você';
     let threadId = chatContainer ? chatContainer.dataset.threadId : null;
     const chatbotType = chatContainer ? chatContainer.dataset.chatbotType : null;
 
@@ -70,16 +70,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Funções
     function loadChatHistory() {
-        fetch('/get_chat_history')
+        // Verificar se existe um threadId salvo no localStorage
+        const savedThreadId = localStorage.getItem('lastThreadId');
+        
+        // Se houver um threadId salvo e não houver um threadId definido no DOM, usar o salvo
+        if (savedThreadId && (!threadId || threadId === 'null')) {
+            threadId = savedThreadId;
+            // Atualizar o threadId no DOM
+            if (chatContainer) {
+                chatContainer.dataset.threadId = threadId;
+            }
+        }
+        
+        // Construir a URL para buscar o histórico, incluindo o threadId se disponível
+        let url = '/get_chat_history';
+        if (threadId && threadId !== 'null') {
+            url += `?thread_id=${threadId}`;
+        }
+        
+        fetch(url)
             .then(response => response.json())
             .then(data => {
+                if (data.thread_id) {
+                    // Atualizar o threadId no DOM e na variável local
+                    threadId = data.thread_id;
+                    if (chatContainer) {
+                        chatContainer.dataset.threadId = threadId;
+                    }
+                    // Salvar o threadId no localStorage para uso futuro
+                    localStorage.setItem('lastThreadId', threadId);
+                }
+                
                 if (data.messages && data.messages.length > 0) {
                     chatContainer.innerHTML = '';
                     data.messages.forEach(msg => {
                         if (msg.role === 'user') {
                             addUserMessage(msg.content, msg.timestamp, msg.user_name);
                             if (msg.user_name && msg.user_name !== 'Usuário Anônimo') {
-                                userName = msg.user_name;
+                                userName = 'Você';
                             }
                         } else if (msg.role === 'assistant') {
                             addAssistantMessage(msg.content, msg.timestamp);
@@ -137,11 +165,18 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Atualizar nome do usuário se necessário
             if (data.user_name && data.user_name !== userName) {
-                userName = data.user_name;
+                userName = 'Você';
                 // Atualizar nome em mensagens anteriores
                 document.querySelectorAll('.chat-message--user .chat-message__sender').forEach(el => {
-                    el.textContent = userName;
+                    el.textContent = 'Você';
                 });
+            }
+            
+            // Se houver um thread_id na resposta, atualizar e salvar
+            if (data.thread_id) {
+                threadId = data.thread_id;
+                document.getElementById('chat-container').dataset.threadId = threadId;
+                localStorage.setItem('lastThreadId', threadId);
             }
             
             // Adicionar resposta do assistente
@@ -163,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const senderDiv = document.createElement('div');
         senderDiv.className = 'chat-message__sender';
-        senderDiv.textContent = name || userName;
+        senderDiv.textContent = 'Você';
         
         const contentDiv = document.createElement('div');
         contentDiv.className = 'chat-message__content';
@@ -193,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const senderDiv = document.createElement('div');
         senderDiv.className = 'chat-message__sender';
-        senderDiv.textContent = 'Assistente IA';
+        senderDiv.textContent = 'IA Especialista em Vendas';
         
         const contentDiv = document.createElement('div');
         contentDiv.className = 'chat-message__content';
@@ -272,7 +307,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                chatbot_type: chatbotType
+                chatbot_type: chatbotType,
+                create_new_thread: true  // Adicionar flag para indicar que desejamos uma nova thread
             })
         })
         .then(response => {
@@ -285,24 +321,32 @@ document.addEventListener('DOMContentLoaded', function() {
             removeElement(loadingId);
             
             if (data.success && data.thread_id) {
-                // Atualizar thread_id no DOM
+                console.log(`Nova thread criada com ID: ${data.thread_id}`);
+                
+                // Primeiro remover o threadId antigo do localStorage
+                localStorage.removeItem('lastThreadId');
+                
+                // Atualizar thread_id no DOM e variável local
                 document.getElementById('chat-container').dataset.threadId = data.thread_id;
                 threadId = data.thread_id;
                 
+                // Salvar o novo threadId no localStorage
+                localStorage.setItem('lastThreadId', threadId);
+                
                 // Limpar chat e adicionar mensagem inicial
                 chatContainer.innerHTML = '';
-                userName = 'Usuário Anônimo';
-                addSystemMessage(data.message || 'Nova sessão iniciada! Qual é o seu nome?');
+                userName = 'Você';
+                addSystemMessage(data.message || 'Nova conversa iniciada! Como posso ajudar?');
                 
                 // Reabilitar input e botão
                 userInput.disabled = false;
                 sendBtn.disabled = false;
             } else {
-                throw new Error(data.error || 'Erro desconhecido ao criar novo usuário');
+                throw new Error(data.error || 'Erro desconhecido ao criar nova thread');
             }
         })
         .catch(error => {
-            console.error('Erro ao criar novo usuário:', error);
+            console.error('Erro ao criar nova thread:', error);
             removeElement(loadingId);
             addSystemMessage(`Erro ao iniciar nova conversa: ${error.message}`);
         });

@@ -336,14 +336,48 @@ class Message:
             return None
 
     @staticmethod
-    def clear_thread_history(thread_id: str) -> bool:
-        """Limpa o histórico de mensagens de um thread específico."""
+    def clear_thread_history(thread_id: str, user_id: str = None, chatbot_type: str = None) -> bool:
+        """
+        Limpa o histórico de mensagens de um thread específico.
+        
+        Args:
+            thread_id: ID do thread a ser limpo
+            user_id: ID do usuário (opcional) para limpar apenas mensagens de um usuário específico
+            chatbot_type: Tipo de chatbot (opcional) para limpar apenas mensagens de um tipo específico
+            
+        Returns:
+            bool: True se a operação foi bem-sucedida, False caso contrário
+        """
         try:
-            response = supabase.table('mensagens_chatbot').delete().eq('thread_id', thread_id).execute()
-            logger.info(f"Histórico de mensagens limpo para thread_id={thread_id}")
+            if not thread_id:
+                logger.error("Tentativa de limpar histórico com thread_id vazio")
+                return False
+                
+            # Construir a query base
+            query = supabase.table('mensagens_chatbot').delete().eq('thread_id', thread_id)
+            
+            # Adicionar filtros opcionais
+            if user_id:
+                query = query.eq('user_id', user_id)
+                
+            if chatbot_type:
+                query = query.eq('chatbot_type', chatbot_type)
+                
+            # Executar a query
+            response = query.execute()
+            
+            # Registrar resultado
+            deleted_count = len(response.data) if response.data else 0
+            logger.info(f"Histórico de mensagens limpo para thread_id={thread_id}: {deleted_count} mensagens removidas")
+            
+            # Verificar se a operação foi bem-sucedida
+            if hasattr(response, 'error') and response.error:
+                logger.error(f"Erro ao limpar histórico: {response.error}")
+                return False
+                
             return True
         except Exception as e:
-            logger.error(f"Erro ao limpar histórico: {str(e)}")
+            logger.error(f"Erro ao limpar histórico: {str(e)}", exc_info=True)
             return False
 
     @staticmethod

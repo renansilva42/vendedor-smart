@@ -220,6 +220,7 @@ def new_user():
 
         data = request.json
         chatbot_type = data.get('chatbot_type', 'atual')  # Default to 'atual' if not specified
+        create_new_thread = data.get('create_new_thread', False)  # Flag para força criação de nova thread
         
         # Validar tipo de chatbot
         if chatbot_type not in ChatbotFactory.get_available_types():
@@ -242,6 +243,12 @@ def new_user():
         if not chatbot:
             logger.error(f"Falha ao criar chatbot do tipo: {chatbot_type}")
             return jsonify({'error': 'Erro ao criar chatbot'}), 500
+        
+        # Limpar cache de instâncias para garantir que uma nova instância será criada
+        if create_new_thread:
+            ChatbotFactory.clear_cache()
+            # Invalidar cache do thread_id do usuário
+            User.get_thread_id.cache_clear()
             
         thread_id = chatbot.create_thread()
         if not thread_id:
@@ -268,14 +275,17 @@ def new_user():
         # Resetar nome do usuário para vazio para prompting de reintrodução
         if User.update_name(user_id, ''):
             logger.info(f"Nome do usuário {user_id} resetado para vazio na nova thread")
-            # Atualizar mensagens existentes para refletir o nome vazio
-            Message.update_user_name(thread_id, user_id, '')
+            # Limpar mensagens existentes para a nova thread para garantir que não haja histórico
+            if create_new_thread:
+                # Primeiro criamos a thread, depois limpamos - não podemos limpar mensagens de uma thread que não existe
+                Message.clear_thread_history(thread_id)
+                logger.info(f"Histórico da thread {thread_id} limpo para garantir nova conversa")
         else:
             logger.warning(f"Falha ao resetar nome do usuário {user_id}")
         
         # Atualizar última interação
         User.update_last_interaction(user_id, chatbot_type)
-        
+    
         # Registrar criação bem-sucedida
         logger.info(f"Nova thread criada para usuário {user_id}, tipo {chatbot_type}: {thread_id}")
         
